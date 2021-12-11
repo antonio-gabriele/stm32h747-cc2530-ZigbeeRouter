@@ -1,0 +1,22 @@
+
+{
+  "Application": {
+    "Name": "STM32H747I-DISCO",
+    "TouchGfxPath": "../Middlewares/ST/touchgfx",
+    "AvailableColorDepths": [ 24 ],
+    "AvailableLCDs":
+    {
+      "24": "LCD24bpp"
+    },
+    "AvailableResolutions" : [
+      {
+        "Width": 800,
+        "Height": 480
+      }
+    ],
+    "PostGenerateTargetCommand" : "touchgfx update_project --project-file=../../STM32H747I-DISCO.ioc --platform=m7",
+    "Family" : "STM32H7",
+    "SubFamily" : "STM32H747/757"
+  },
+  "Version": "4.18.0"
+}
