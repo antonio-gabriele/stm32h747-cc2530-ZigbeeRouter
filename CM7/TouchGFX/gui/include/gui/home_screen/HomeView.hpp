@@ -13,6 +13,8 @@ public:
     virtual void tearDownScreen();
     virtual void btnPairClick();
     virtual void btnStartClick();
+    virtual void show(char *);
+
 protected:
 };
 

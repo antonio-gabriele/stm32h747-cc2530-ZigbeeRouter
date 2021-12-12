@@ -12,7 +12,6 @@ public:
     {
         modelListener = listener;
     }
-
     void tick();
 protected:
     ModelListener* modelListener;

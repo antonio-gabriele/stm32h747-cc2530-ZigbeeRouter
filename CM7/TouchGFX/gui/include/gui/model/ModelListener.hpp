@@ -2,6 +2,7 @@
 #define MODELLISTENER_HPP
 
 #include <gui/model/Model.hpp>
+#include <appTask.h>
 
 class ModelListener
 {
@@ -14,6 +15,7 @@ public:
     {
         model = m;
     }
+    virtual void receive(struct AppMessage * message);
 protected:
     Model* model;
 };

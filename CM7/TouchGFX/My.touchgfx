@@ -53,17 +53,23 @@
             "Clickable": true
           },
           {
-            "Type": "ScrollList",
-            "Name": "scrollListLog",
+            "Type": "TextArea",
+            "Name": "textArea",
             "X": 230,
-            "Y": 45,
-            "Width": 525,
-            "Height": 390,
-            "NumberofItems": 10,
-            "Easing": "Back",
-            "EasingOption": "Out",
-            "SwipeAcceleration": 1.0,
-            "DragAcceleration": 1.0
+            "Y": 50,
+            "Width": 520,
+            "Height": 380,
+            "TextId": "__SingleUse_1EDP",
+            "TextRotation": "0",
+            "Color": {
+              "Red": 255,
+              "Green": 255,
+              "Blue": 255
+            },
+            "Wildcard1": {
+              "UseBuffer": true,
+              "BufferSize": 8192
+            }
           }
         ],
         "Interactions": [

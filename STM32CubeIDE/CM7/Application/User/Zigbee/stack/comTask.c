@@ -1,6 +1,8 @@
 #include <comTask.h>
 #include "cmsis_os.h"
 #include "rpc.h"
+#include <queue.h>
+
 
 void vPollTask(void *pvParameters) {
 	// endless loop, handle CC2530 packets
