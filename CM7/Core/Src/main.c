@@ -18,13 +18,14 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
+#include <appTask.h>
+#include <comTask.h>
 #include "main.h"
 #include "cmsis_os.h"
 #include "app_touchgfx.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "stack.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/

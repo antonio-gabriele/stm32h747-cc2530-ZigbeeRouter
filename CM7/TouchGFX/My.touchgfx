@@ -2,13 +2,13 @@
   "Application": {
     "Screens": [
       {
-        "Name": "Screen1",
+        "Name": "Home",
         "Components": [
           {
             "Type": "ButtonWithLabel",
-            "Name": "buttonWithLabel1",
+            "Name": "btnPair",
             "X": 45,
-            "Y": 87,
+            "Y": 45,
             "Width": 170,
             "Height": 60,
             "Pressed": "__designer\\Blue_Buttons_Round_Edge_small_pressed.png",
@@ -25,7 +25,45 @@
               "Blue": 255
             },
             "TextRotation": "0",
-            "Style": "Style4"
+            "Style": "Style4",
+            "Clickable": true
+          },
+          {
+            "Type": "ButtonWithLabel",
+            "Name": "btnStart",
+            "X": 45,
+            "Y": 105,
+            "Width": 170,
+            "Height": 60,
+            "Pressed": "__designer\\Blue_Buttons_Round_Edge_small_pressed.png",
+            "Released": "__designer\\Blue_Buttons_Round_Edge_small.png",
+            "TextId": "__SingleUse_JRER",
+            "ReleasedColor": {
+              "Red": 255,
+              "Green": 255,
+              "Blue": 255
+            },
+            "PressedColor": {
+              "Red": 255,
+              "Green": 255,
+              "Blue": 255
+            },
+            "TextRotation": "0",
+            "Style": "Style4",
+            "Clickable": true
+          },
+          {
+            "Type": "ScrollList",
+            "Name": "scrollListLog",
+            "X": 230,
+            "Y": 45,
+            "Width": 525,
+            "Height": 390,
+            "NumberofItems": 10,
+            "Easing": "Back",
+            "EasingOption": "Out",
+            "SwipeAcceleration": 1.0,
+            "DragAcceleration": 1.0
           }
         ],
         "Interactions": []
@@ -38,7 +76,7 @@
       "Height": 480
     },
     "SelectedColorDepth": 24,
-    "StartupScreenName": "Screen1",
+    "StartupScreenName": "Home",
     "SelectedStartupLanguage": "GB",
     "Skin": "Blue",
     "TouchGfxPath": "../Middlewares/ST/touchgfx",
