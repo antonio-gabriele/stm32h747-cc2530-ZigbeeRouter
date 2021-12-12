@@ -94,7 +94,7 @@ void dbg_print(int print_level, const char *fmt, ...) {
 		va_end(args);
 
 		// send data
-		sprintf("%s", working_buffer);
+		printf(working_buffer);
 	}
 }
 
@@ -111,5 +111,5 @@ void log_print(const char *fmt, ...) {
 	va_end(args);
 
 	// send data
-	sprintf("%s", working_buffer);
+	printf(working_buffer);
 }

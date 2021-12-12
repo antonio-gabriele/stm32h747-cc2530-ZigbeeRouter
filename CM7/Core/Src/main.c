@@ -24,7 +24,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stack.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -57,7 +57,7 @@ LTDC_HandleTypeDef hltdc;
 
 QSPI_HandleTypeDef hqspi;
 
-UART_HandleTypeDef huart2;
+UART_HandleTypeDef huart8;
 
 SDRAM_HandleTypeDef hsdram1;
 
@@ -83,7 +83,7 @@ static void MX_QUADSPI_Init(void);
 static void MX_DMA2D_Init(void);
 static void MX_DSIHOST_DSI_Init(void);
 static void MX_LTDC_Init(void);
-static void MX_USART2_UART_Init(void);
+static void MX_UART8_Init(void);
 void TouchGFX_Task(void *argument);
 
 /* USER CODE BEGIN PFP */
@@ -167,7 +167,7 @@ Error_Handler();
   MX_DMA2D_Init();
   MX_DSIHOST_DSI_Init();
   MX_LTDC_Init();
-  MX_USART2_UART_Init();
+  MX_UART8_Init();
   MX_TouchGFX_Init();
   /* USER CODE BEGIN 2 */
 
@@ -198,6 +198,49 @@ Error_Handler();
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+  xTaskCreate(vAppTask, "APP", 1500, NULL, 6, NULL);
+  xTaskCreate(vComTask, "COM", 512, NULL, 5, NULL);
+  /* USER CODE END RTOS_THREADS */
+
+  /* USER CODE BEGIN RTOS_EVENTS */
+  /* add events, ... */
+  /* USER CODE END RTOS_EVENTS */
+
+  /* Start scheduler */
+  osKernelStart();
+
+  /* We should never get here as control is now taken by the scheduler */
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+  /* USER CODE END 2 */
+
+  /* Init scheduler */
+  osKernelInitialize();
+
+  /* USER CODE BEGIN RTOS_MUTEX */
+  /* add mutexes, ... */
+  /* USER CODE END RTOS_MUTEX */
+
+  /* USER CODE BEGIN RTOS_SEMAPHORES */
+  /* add semaphores, ... */
+  /* USER CODE END RTOS_SEMAPHORES */
+
+  /* USER CODE BEGIN RTOS_TIMERS */
+  /* start timers, add new ones, ... */
+  /* USER CODE END RTOS_TIMERS */
+
+  /* USER CODE BEGIN RTOS_QUEUES */
+  /* add queues, ... */
+  /* USER CODE END RTOS_QUEUES */
+
+  /* Create the thread(s) */
+  /* creation of TouchGFXTask */
+  TouchGFXTaskHandle = osThreadNew(TouchGFX_Task, NULL, &TouchGFXTask_attributes);
+
+  /* USER CODE BEGIN RTOS_THREADS */
+  /* add threads, ... */
+  xTaskCreate(vAppTask, "APP", 1500, NULL, 6, NULL);
+  xTaskCreate(vComTask, "COM", 512, NULL, 5, NULL);
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -592,50 +635,50 @@ static void MX_QUADSPI_Init(void)
 }
 
 /**
-  * @brief USART2 Initialization Function
+  * @brief UART8 Initialization Function
   * @param None
   * @retval None
   */
-static void MX_USART2_UART_Init(void)
+static void MX_UART8_Init(void)
 {
 
-  /* USER CODE BEGIN USART2_Init 0 */
+  /* USER CODE BEGIN UART8_Init 0 */
 
-  /* USER CODE END USART2_Init 0 */
+  /* USER CODE END UART8_Init 0 */
 
-  /* USER CODE BEGIN USART2_Init 1 */
+  /* USER CODE BEGIN UART8_Init 1 */
 
-  /* USER CODE END USART2_Init 1 */
-  huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
-  huart2.Init.WordLength = UART_WORDLENGTH_8B;
-  huart2.Init.StopBits = UART_STOPBITS_1;
-  huart2.Init.Parity = UART_PARITY_NONE;
-  huart2.Init.Mode = UART_MODE_TX_RX;
-  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-  huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-  huart2.Init.ClockPrescaler = UART_PRESCALER_DIV1;
-  huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  if (HAL_UART_Init(&huart2) != HAL_OK)
+  /* USER CODE END UART8_Init 1 */
+  huart8.Instance = UART8;
+  huart8.Init.BaudRate = 115200;
+  huart8.Init.WordLength = UART_WORDLENGTH_8B;
+  huart8.Init.StopBits = UART_STOPBITS_1;
+  huart8.Init.Parity = UART_PARITY_NONE;
+  huart8.Init.Mode = UART_MODE_TX_RX;
+  huart8.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart8.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart8.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart8.Init.ClockPrescaler = UART_PRESCALER_DIV1;
+  huart8.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart8) != HAL_OK)
   {
     Error_Handler();
   }
-  if (HAL_UARTEx_SetTxFifoThreshold(&huart2, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
+  if (HAL_UARTEx_SetTxFifoThreshold(&huart8, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
   {
     Error_Handler();
   }
-  if (HAL_UARTEx_SetRxFifoThreshold(&huart2, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
+  if (HAL_UARTEx_SetRxFifoThreshold(&huart8, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
   {
     Error_Handler();
   }
-  if (HAL_UARTEx_DisableFifoMode(&huart2) != HAL_OK)
+  if (HAL_UARTEx_DisableFifoMode(&huart8) != HAL_OK)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN USART2_Init 2 */
+  /* USER CODE BEGIN UART8_Init 2 */
 
-  /* USER CODE END USART2_Init 2 */
+  /* USER CODE END UART8_Init 2 */
 
 }
 
@@ -702,11 +745,11 @@ static void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOI_CLK_ENABLE();
   __HAL_RCC_GPIOG_CLK_ENABLE();
-  __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOJ_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOF_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();

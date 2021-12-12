@@ -52,7 +52,7 @@
 #include "FreeRTOS.h"
 #include "queue.h"
 
-extern UART_HandleTypeDef huart2;
+extern UART_HandleTypeDef huart8;
 
 /*********************************************************************
  * MACROS
@@ -101,7 +101,7 @@ int32_t rpcTransportOpen(void) {
 	rpc_q_uart_rx = xQueueCreate(256, sizeof(uint8_t));
 
 	// enable receive interrupt
-	SET_BIT(huart2.Instance->CR1, USART_CR1_RXNEIE);
+	SET_BIT(huart8.Instance->CR1, USART_CR1_RXNEIE);
 
 	// throw an error if one queue couldn't be created
 	return (rpc_q_uart_tx == NULL || rpc_q_uart_rx == NULL) ? -1 : 0;
@@ -125,16 +125,16 @@ void rpcTransportClose(void) {
  */
 void rpcTransportISR(void) {
 	// read status register
-	isr_stat = huart2.Instance->ISR;
+	isr_stat = huart8.Instance->ISR;
 
 	// overrun error?
 	if (isr_stat & USART_ISR_ORE)
-		huart2.Instance->ICR |= USART_ICR_ORECF;
+		huart8.Instance->ICR |= USART_ICR_ORECF;
 
 	// check for rx interrupt
 	if (isr_stat & USART_ISR_RXNE_RXFNE_Msk) {
 		// read the data
-		isr_data = huart2.Instance->RDR & 0xFF;
+		isr_data = huart8.Instance->RDR & 0xFF;
 
 		// Transmit data to queue
 		xQueueSendFromISR(rpc_q_uart_rx, (void* ) &isr_data, NULL);
@@ -145,11 +145,11 @@ void rpcTransportISR(void) {
 		// grab data from fifo
 		if (xQueueReceiveFromISR(rpc_q_uart_tx, (void*) &isr_data, NULL) == pdFALSE) {
 			// end of transmission, disable TX empty interrupt
-			CLEAR_BIT(huart2.Instance->CR1, USART_CR1_TCIE);
+			CLEAR_BIT(huart8.Instance->CR1, USART_CR1_TCIE);
 		}
 		else {
 			// send another byte
-			huart2.Instance->TDR = isr_data;
+			huart8.Instance->TDR = isr_data;
 		}
 	}
 }
@@ -170,8 +170,8 @@ void rpcTransportWrite(uint8_t *buf, uint8_t len) {
 		xQueueSend(rpc_q_uart_tx, (void* ) &buf[i], 1);
 
 		// enable "RX Not Empty" and "TX Empty" interrupt
-		SET_BIT(huart2.Instance->CR1, USART_CR1_RXNEIE);
-		SET_BIT(huart2.Instance->CR1, USART_CR1_TCIE);
+		SET_BIT(huart8.Instance->CR1, USART_CR1_RXNEIE);
+		SET_BIT(huart8.Instance->CR1, USART_CR1_TCIE);
 	}
 }
 

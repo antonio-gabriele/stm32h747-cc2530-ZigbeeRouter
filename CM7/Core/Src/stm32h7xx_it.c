@@ -23,6 +23,7 @@
 #include "stm32h7xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "rpcTransport.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -59,7 +60,7 @@
 extern DMA2D_HandleTypeDef hdma2d;
 extern DSI_HandleTypeDef hdsi;
 extern LTDC_HandleTypeDef hltdc;
-extern UART_HandleTypeDef huart2;
+extern UART_HandleTypeDef huart8;
 extern TIM_HandleTypeDef htim6;
 
 /* USER CODE BEGIN EV */
@@ -165,20 +166,6 @@ void DebugMon_Handler(void)
 /******************************************************************************/
 
 /**
-  * @brief This function handles USART2 global interrupt.
-  */
-void USART2_IRQHandler(void)
-{
-  /* USER CODE BEGIN USART2_IRQn 0 */
-
-  /* USER CODE END USART2_IRQn 0 */
-  HAL_UART_IRQHandler(&huart2);
-  /* USER CODE BEGIN USART2_IRQn 1 */
-
-  /* USER CODE END USART2_IRQn 1 */
-}
-
-/**
   * @brief This function handles TIM6 global interrupt, DAC1_CH1 and DAC1_CH2 underrun error interrupts.
   */
 void TIM6_DAC_IRQHandler(void)
@@ -190,6 +177,21 @@ void TIM6_DAC_IRQHandler(void)
   /* USER CODE BEGIN TIM6_DAC_IRQn 1 */
 
   /* USER CODE END TIM6_DAC_IRQn 1 */
+}
+
+/**
+  * @brief This function handles UART8 global interrupt.
+  */
+void UART8_IRQHandler(void)
+{
+  /* USER CODE BEGIN UART8_IRQn 0 */
+	rpcTransportISR();
+#if 0
+  /* USER CODE END UART8_IRQn 0 */
+  HAL_UART_IRQHandler(&huart8);
+  /* USER CODE BEGIN UART8_IRQn 1 */
+#endif
+  /* USER CODE END UART8_IRQn 1 */
 }
 
 /**
