@@ -14,6 +14,8 @@
 #include "rpcTransport.h"
 #include "znp_cmd.h"
 #include "znp_if.h"
+#include <FreeRTOS.h>
+#include <queue.h>
 
 typedef enum {
 	ZB_DANFOSS_ALLY,
@@ -38,6 +40,8 @@ zigbee_device_t* zigbee_device_get_free_handle(void) {
 	static zigbee_device_t device = { 0 };
 	return &device;
 }
+
+extern QueueHandle_t xQueueViewToBackend;
 
 void zigbee_device_save(zigbee_device_t *dev) {
 
@@ -337,6 +341,19 @@ void register_clusters(uint16_t addr) {
 	log_print("Data: %d\r\n", wr.data_i16);
 }
 
+void pair() {
+
+}
+
+void start() {
+	// initialize coordinator
+	znp_init_coordinator(0);
+
+	// register cluster
+	register_clusters(0x82bc);
+
+}
+
 /////////////////////////////////////////////////
 void vAppTask(void *pvParameters) {
 	log_print("System started\r\n");
@@ -358,11 +375,21 @@ void vAppTask(void *pvParameters) {
 		ret = sysVersion();
 	} while (ret != 0);
 
-	// initialize coordinator
-	znp_init_coordinator(0);
+	struct AppMessage xRxedStructure;
+	while (1) {
+		if (xQueueReceive(xQueueViewToBackend, (struct AppMessage*) &xRxedStructure,
+				(TickType_t) 10) == pdPASS) {
+			switch (xRxedStructure.ucMessageID) {
+			case 0:
+				pair();
+				break;
+			case 1:
+				start();
+				break;
+			}
+		}
 
-	// register cluster
-	register_clusters(0x82bc);
+	}
 
 	// endless loop, handle CC2530 packets
 	while (1) {

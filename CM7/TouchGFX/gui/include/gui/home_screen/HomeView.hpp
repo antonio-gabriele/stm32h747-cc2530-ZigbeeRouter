@@ -11,6 +11,8 @@ public:
     virtual ~HomeView() {}
     virtual void setupScreen();
     virtual void tearDownScreen();
+    virtual void btnPairClick();
+    virtual void btnStartClick();
 protected:
 };
 
