@@ -22,18 +22,16 @@ extern QueueHandle_t xQueueBackendToView;
 #define MAX_CHILDREN 10
 #define MAX_NODE_LIST 10
 
-/*********************************************************************
- * LOCAL FUNCTIONS
- */
 //ZDO Callbacks
 static uint8_t mtZdoStateChangeIndCb(uint8_t newDevState);
 static uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t *msg);
 
 //SYS Callbacks
-
-static uint8_t show(const char *fmt, ...);
-
 static uint8_t mtSysResetIndCb(ResetIndFormat_t *msg);
+static uint8_t mtSysVersionCb(VersionSrspFormat_t *msg);
+
+//MY
+static uint8_t show(const char *fmt, ...);
 
 //helper functions
 static uint8_t setNVStartup(uint8_t startupOption);
@@ -67,6 +65,69 @@ zigbee_device_t* zigbee_device_get_free_handle(void) {
 }
 
 extern QueueHandle_t xQueueViewToBackend;
+
+// SYS callbacks
+static mtSysCb_t mtSysCb = {
+		NULL,
+		NULL,
+		NULL,
+		mtSysResetIndCb,
+		mtSysVersionCb,
+		NULL,
+		NULL,
+		NULL,
+		NULL,
+		NULL,
+		NULL,
+		NULL,
+		NULL,
+		NULL };
+
+static mtZdoCb_t mtZdoCb = {
+		NULL,       // MT_ZDO_NWK_ADDR_RSP
+		NULL,      // MT_ZDO_IEEE_ADDR_RSP
+		NULL,      // MT_ZDO_NODE_DESC_RSP
+		NULL,     // MT_ZDO_POWER_DESC_RSP
+		NULL,    // MT_ZDO_SIMPLE_DESC_RSP
+		NULL,      // MT_ZDO_ACTIVE_EP_RSP
+		NULL,     // MT_ZDO_MATCH_DESC_RSP
+		NULL,   // MT_ZDO_COMPLEX_DESC_RSP
+		NULL,      // MT_ZDO_USER_DESC_RSP
+		NULL,     // MT_ZDO_USER_DESC_CONF
+		NULL,    // MT_ZDO_SERVER_DISC_RSP
+		NULL, // MT_ZDO_END_DEVICE_BIND_RSP
+		NULL,          // MT_ZDO_BIND_RSP
+		NULL,        // MT_ZDO_UNBIND_RSP
+		NULL,   // MT_ZDO_MGMT_NWK_DISC_RSP
+		mtZdoMgmtLqiRspCb,       // MT_ZDO_MGMT_LQI_RSP
+		NULL,       // MT_ZDO_MGMT_RTG_RSP
+		NULL,      // MT_ZDO_MGMT_BIND_RSP
+		NULL,     // MT_ZDO_MGMT_LEAVE_RSP
+		NULL,     // MT_ZDO_MGMT_DIRECT_JOIN_RSP
+		NULL,     // MT_ZDO_MGMT_PERMIT_JOIN_RSP
+		mtZdoStateChangeIndCb,   // MT_ZDO_STATE_CHANGE_IND
+		NULL,   // MT_ZDO_END_DEVICE_ANNCE_IND
+		NULL,        // MT_ZDO_SRC_RTG_IND
+		NULL,	 //MT_ZDO_BEACON_NOTIFY_IND
+		NULL,			 //MT_ZDO_JOIN_CNF
+		NULL,	 //MT_ZDO_NWK_DISCOVERY_CNF
+		NULL,                    // MT_ZDO_CONCENTRATOR_IND_CB
+		NULL,         // MT_ZDO_LEAVE_IND
+		NULL,   //MT_ZDO_STATUS_ERROR_RSP
+		NULL,  //MT_ZDO_MATCH_DESC_RSP_SENT
+		NULL, NULL };
+
+static uint8_t mtSysResetIndCb(ResetIndFormat_t *msg) {
+	show("Reset ZNP Version: %d.%d.%d", msg->MajorRel, msg->MinorRel,
+			msg->HwRev);
+	return 0;
+}
+
+static uint8_t mtSysVersionCb(VersionSrspFormat_t *msg) {
+	show("Request ZNP Version: %d.%d.%d", msg->MajorRel, msg->MinorRel,
+			msg->Product);
+	return 0;
+}
 
 void zigbee_device_save(zigbee_device_t *dev) {
 
@@ -432,7 +493,7 @@ void start() {
 }
 
 void pair() {
-	show("Network pairing");
+	show("Network pairing.");
 	int32_t status;
 	status = setNVStartup(ZCD_STARTOPT_CLEAR_STATE | ZCD_STARTOPT_CLEAR_CONFIG);
 	if (status != MT_RPC_SUCCESS) {
@@ -459,7 +520,10 @@ void vAppTaskLoop() {
 
 /////////////////////////////////////////////////
 void vAppTask(void *pvParameters) {
-	show("System Started");
+	show("State Machine Starting.");
+	sysRegisterCallbacks(mtSysCb);
+	zdoRegisterCallbacks(mtZdoCb);
+	show("System Started.");
 	znp_if_init();
 	znp_if_init();
 	znp_cmd_init();
@@ -469,7 +533,7 @@ void vAppTask(void *pvParameters) {
 		vTaskDelay(1000);
 		ret = sysVersion();
 	} while (ret != 0);
-	show("State Machine Starting");
+	show("Loop Started.");
 	while (1)
 		vAppTaskLoop();
 }
@@ -478,45 +542,6 @@ void vAppTask(void *pvParameters) {
 devStates_t devState = DEV_HOLD;
 uint8_t gSrcEndPoint = 1;
 uint8_t gDstEndPoint = 1;
-
-// SYS callbacks
-static mtSysCb_t mtSysCb = {
-//mtSysResetInd          //MT_SYS_RESET_IND
-		NULL, NULL, NULL, mtSysResetIndCb, NULL, NULL, NULL, NULL, NULL,
-		NULL, NULL, NULL, NULL, NULL };
-
-static mtZdoCb_t mtZdoCb = { NULL,       // MT_ZDO_NWK_ADDR_RSP
-		NULL,      // MT_ZDO_IEEE_ADDR_RSP
-		NULL,      // MT_ZDO_NODE_DESC_RSP
-		NULL,     // MT_ZDO_POWER_DESC_RSP
-		NULL,    // MT_ZDO_SIMPLE_DESC_RSP
-		NULL,      // MT_ZDO_ACTIVE_EP_RSP
-		NULL,     // MT_ZDO_MATCH_DESC_RSP
-		NULL,   // MT_ZDO_COMPLEX_DESC_RSP
-		NULL,      // MT_ZDO_USER_DESC_RSP
-		NULL,     // MT_ZDO_USER_DESC_CONF
-		NULL,    // MT_ZDO_SERVER_DISC_RSP
-		NULL, // MT_ZDO_END_DEVICE_BIND_RSP
-		NULL,          // MT_ZDO_BIND_RSP
-		NULL,        // MT_ZDO_UNBIND_RSP
-		NULL,   // MT_ZDO_MGMT_NWK_DISC_RSP
-		mtZdoMgmtLqiRspCb,       // MT_ZDO_MGMT_LQI_RSP
-		NULL,       // MT_ZDO_MGMT_RTG_RSP
-		NULL,      // MT_ZDO_MGMT_BIND_RSP
-		NULL,     // MT_ZDO_MGMT_LEAVE_RSP
-		NULL,     // MT_ZDO_MGMT_DIRECT_JOIN_RSP
-		NULL,     // MT_ZDO_MGMT_PERMIT_JOIN_RSP
-		mtZdoStateChangeIndCb,   // MT_ZDO_STATE_CHANGE_IND
-		NULL,   // MT_ZDO_END_DEVICE_ANNCE_IND
-		NULL,        // MT_ZDO_SRC_RTG_IND
-		NULL,	 //MT_ZDO_BEACON_NOTIFY_IND
-		NULL,			 //MT_ZDO_JOIN_CNF
-		NULL,	 //MT_ZDO_NWK_DISCOVERY_CNF
-		NULL,                    // MT_ZDO_CONCENTRATOR_IND_CB
-		NULL,         // MT_ZDO_LEAVE_IND
-		NULL,   //MT_ZDO_STATUS_ERROR_RSP
-		NULL,  //MT_ZDO_MATCH_DESC_RSP_SENT
-		NULL, NULL };
 
 typedef struct {
 	uint16_t ChildAddr;
@@ -533,12 +558,6 @@ typedef struct {
 
 Node_t nodeList[MAX_NODE_LIST];
 uint8_t nodeCount = 0;
-static uint8_t mtSysResetIndCb(ResetIndFormat_t *msg) {
-
-	consolePrint("ZNP Version: %d.%d.%d", msg->MajorRel, msg->MinorRel,
-			msg->HwRev);
-	return 0;
-}
 
 /********************************************************************
  * START OF ZDO CALL BACK FUNCTIONS
@@ -548,59 +567,49 @@ static uint8_t mtZdoStateChangeIndCb(uint8_t newDevState) {
 
 	switch (newDevState) {
 	case DEV_HOLD:
-		dbg_print(PRINT_LEVEL_INFO,
-				"mtZdoStateChangeIndCb: Initialized - not started automatically");
+		show("mtZdoStateChangeIndCb: Initialized - not started automatically");
 		break;
 	case DEV_INIT:
-		dbg_print(PRINT_LEVEL_INFO,
-				"mtZdoStateChangeIndCb: Initialized - not connected to anything");
+		show("mtZdoStateChangeIndCb: Initialized - not connected to anything");
 		break;
 	case DEV_NWK_DISC:
-		dbg_print(PRINT_LEVEL_INFO,
-				"mtZdoStateChangeIndCb: Discovering PAN's to join");
-		consolePrint("Network Discovering");
+		show("mtZdoStateChangeIndCb: Discovering PAN's to join");
+		show("Network Discovering");
 		break;
 	case DEV_NWK_JOINING:
-		dbg_print(PRINT_LEVEL_INFO, "mtZdoStateChangeIndCb: Joining a PAN");
-		consolePrint("Network Joining");
+		show("mtZdoStateChangeIndCb: Joining a PAN");
+		show("Network Joining");
 		break;
 	case DEV_NWK_REJOIN:
-		dbg_print(PRINT_LEVEL_INFO,
-				"mtZdoStateChangeIndCb: ReJoining a PAN, only for end devices");
-		consolePrint("Network Rejoining");
+		show("Network Rejoining");
+		show("mtZdoStateChangeIndCb: ReJoining a PAN, only for end devices");
 		break;
 	case DEV_END_DEVICE_UNAUTH:
-		consolePrint("Network Authenticating");
-		dbg_print(PRINT_LEVEL_INFO,
-				"mtZdoStateChangeIndCb: Joined but not yet authenticated by trust center");
+		show("Network Authenticating");
+		show("mtZdoStateChangeIndCb: Joined but not yet authenticated by trust center");
 		break;
 	case DEV_END_DEVICE:
-		consolePrint("Network Joined");
-		dbg_print(PRINT_LEVEL_INFO,
-				"mtZdoStateChangeIndCb: Started as device after authentication");
+		show("Network Joined");
+		show("mtZdoStateChangeIndCb: Started as device after authentication");
 		break;
 	case DEV_ROUTER:
-		consolePrint("Network Joined");
-		dbg_print(PRINT_LEVEL_INFO,
-				"mtZdoStateChangeIndCb: Device joined, authenticated and is a router");
+		show("Network Joined");
+		show("mtZdoStateChangeIndCb: Device joined, authenticated and is a router");
 		break;
 	case DEV_COORD_STARTING:
-		consolePrint("Network Starting");
-		dbg_print(PRINT_LEVEL_INFO,
-				"mtZdoStateChangeIndCb: Started as Zigbee Coordinator");
+		show("Network Starting");
+		show("mtZdoStateChangeIndCb: Started as Zigbee Coordinator");
 		break;
 	case DEV_ZB_COORD:
-		consolePrint("Network Started");
-		dbg_print(PRINT_LEVEL_INFO,
-				"mtZdoStateChangeIndCb: Started as Zigbee Coordinator");
+		show("Network Started");
+		show("mtZdoStateChangeIndCb: Started as Zigbee Coordinator");
 		break;
 	case DEV_NWK_ORPHAN:
-		consolePrint("Network Orphaned");
-		dbg_print(PRINT_LEVEL_INFO,
-				"mtZdoStateChangeIndCb: Device has lost information about its parent");
+		show("Network Orphaned");
+		show("mtZdoStateChangeIndCb: Device has lost information about its parent");
 		break;
 	default:
-		dbg_print(PRINT_LEVEL_INFO, "mtZdoStateChangeIndCb: unknown state");
+		show("mtZdoStateChangeIndCb: unknown state");
 		break;
 	}
 
@@ -642,7 +651,7 @@ static uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t *msg) {
 			}
 		}
 	} else {
-		consolePrint("MgmtLqiRsp Status: FAIL 0x%02X", msg->Status);
+		//consolePrint("MgmtLqiRsp Status: FAIL 0x%02X", msg->Status);
 	}
 
 	return msg->Status;
@@ -676,8 +685,7 @@ static uint8_t setNVDevType(uint8_t devType) {
 	nvWrite.Len = 1;
 	nvWrite.Value[0] = devType;
 	status = sysOsalNvWrite(&nvWrite);
-	dbg_print(PRINT_LEVEL_INFO, "");
-	dbg_print(PRINT_LEVEL_INFO, "NV Write Device Type cmd sent... [%d]",
+	show("NV Write Device Type cmd sent... [%d]",
 			status);
 
 	return status;
@@ -736,122 +744,4 @@ static int32_t registerAf(void) {
 
 	status = afRegister(&reg);
 	return status;
-}
-
-/*********************************************************************
- * INTERFACE FUNCTIONS
- */
-uint32_t appInit(void) {
-	int32_t status = 0;
-	uint32_t msgCnt = 0;
-
-	//Flush all messages from the que
-	while (status != -1) {
-		status = rpcWaitMqClientMsg(10);
-		if (status != -1) {
-			msgCnt++;
-		}
-	}
-
-	dbg_print(PRINT_LEVEL_INFO, "flushed %d message from msg queue", msgCnt);
-
-	//Register Callbacks MT system callbacks
-	sysRegisterCallbacks(mtSysCb);
-	zdoRegisterCallbacks(mtZdoCb);
-
-	return 0;
-}
-/*
- void* appProcess(void *argument)
- {
- int32_t status = 0;
- //Flush all messages from the que
- while (status != -1)
- {
- status = rpcWaitMqClientMsg(50);
- }
- //init variable
- devState = DEV_HOLD;
- gSrcEndPoint = 1;
- gDstEndPoint = 1;
-
- status = startNetwork();
- if (status != -1)
- {
- consolePrint("Network up\n");
- }
- else
- {
- consolePrint("Network Error\n");
- }
-
- sysGetExtAddr();
-
- OsalNvWriteFormat_t nvWrite;
- nvWrite.Id = ZCD_NV_ZDO_DIRECT_CB;
- nvWrite.Offset = 0;
- nvWrite.Len = 1;
- nvWrite.Value[0] = 1;
- status = sysOsalNvWrite(&nvWrite);
- status = 0;
- char cmd[128];
- MgmtLqiReqFormat_t req;
- req.DstAddr = 0;
- req.StartIndex = 0;
- while (1)
- {
- consolePrint("Press Enter to discover Network Topology:");
-
- consoleGetLine(cmd, 128);
- nodeCount = 0;
-
- zdoMgmtLqiReq(&req);
- while (status != -1)
- {
- status = rpcWaitMqClientMsg(1000);
- }
- status = 0;
- uint8_t i;
- for (i = 0; i < nodeCount; i++)
- {
- char *devtype = (
- nodeList[i].Type == DEVICETYPE_ROUTER ?
- "ROUTER" : "END DEVICE");
- if (nodeList[i].Type == DEVICETYPE_COORDINATOR)
- {
- devtype = "COORDINATOR";
- }
- consolePrint("Node Address: 0x%04X   Type: %s",
- nodeList[i].NodeAddr, devtype);
-
- consolePrint("Children: %d", nodeList[i].ChildCount);
- uint8_t cI;
- for (cI = 0; cI < nodeList[i].ChildCount; cI++)
- {
- uint8_t type = nodeList[i].childs[cI].Type;
- consolePrint("\tAddress: 0x%04X   Type: %s",
- nodeList[i].childs[cI].ChildAddr,
- (type == DEVICETYPE_ROUTER ? "ROUTER" : "END DEVICE"));
- }
- consolePrint("");
- }
- }
- return 0;
- }
- */
-/* USER CODE BEGIN 5 */
-void vApplicationMallocFailedHook(void) {
-	/* vApplicationMallocFailedHook() will only be called if
-	 configUSE_MALLOC_FAILED_HOOK is set to 1 in FreeRTOSConfig.h. It is a hook
-	 function that will get called if a call to pvPortMalloc() fails.
-	 pvPortMalloc() is called internally by the kernel whenever a task, queue,
-	 timer or semaphore is created. It is also called by various parts of the
-	 demo application. If heap_1.c or heap_2.c are used, then the size of the
-	 heap available to pvPortMalloc() is defined by configTOTAL_HEAP_SIZE in
-	 FreeRTOSConfig.h, and the xPortGetFreeHeapSize() API function can be used
-	 to query the size of free heap space that remains (although it does not
-	 provide information on how the remaining heap might be fragmented). */
-	show("-> !!! Malloc failed");
-	while (1)
-		;
 }

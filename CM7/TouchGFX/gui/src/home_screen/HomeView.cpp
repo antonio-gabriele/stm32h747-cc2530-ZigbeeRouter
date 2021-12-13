@@ -9,17 +9,13 @@ HomeView::HomeView() {
 }
 
 void HomeView::displayMessage(char *msg) {
-	uint16_t length = strlen(msg) + 1;
-	Unicode::UnicodeChar *start = textAreaBuffer;
-	Unicode::UnicodeChar *begin = start + length;
-	Unicode::UnicodeChar *stop = start + TEXTAREA_SIZE - 1;
-	while (stop >= begin) {
-		Unicode::UnicodeChar *pointer = stop - length;
-		*stop = *pointer;
-		stop = stop - 1;
+	uint16_t length = strlen(msg);
+	Unicode::UnicodeChar *stop = textAreaBuffer + TEXTAREA_SIZE;
+	while (--stop > (textAreaBuffer + length)) {
+		*stop = *(stop - length - 1);
 	}
-	Unicode::strncpy(textAreaBuffer, msg, length - 1);
-	Unicode::strncpy(textAreaBuffer + length - 1, "\n", 1);
+    Unicode::strncpy(textAreaBuffer, msg, length);
+	Unicode::strncpy(textAreaBuffer + length, "\n", 1);
 	this->textArea.invalidate();
 }
 
