@@ -7,19 +7,22 @@
 #include <stdio.h>
 
 extern QueueHandle_t xQueueBackendToView;
+extern QueueHandle_t xQueueViewToBackend;
 
-Model::Model() : modelListener(0)
-{
+Model::Model() :
+		modelListener(0) {
 
 }
 
-void Model::tick()
-{
+void Model::uiToBe(struct AppMessage *message) {
+	xQueueSend(xQueueViewToBackend, (void* ) message, (TickType_t ) 0);
+}
+
+void Model::tick() {
 	struct AppMessage xRxedStructure;
-	if (xQueueReceive(xQueueBackendToView,
-			(struct AppMessage*) &xRxedStructure, (TickType_t) 10)
-			== pdPASS) {
-		this->modelListener->receive(&xRxedStructure);
+	if (xQueueReceive(xQueueBackendToView, (struct AppMessage*) &xRxedStructure,
+			(TickType_t) 10) == pdPASS) {
+		this->modelListener->beToUi(&xRxedStructure);
 	}
 
 }

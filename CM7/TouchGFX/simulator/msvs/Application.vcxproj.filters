@@ -184,12 +184,6 @@
     <Filter Include="Source Files\generated\gui_generated\home_screen">
       <UniqueIdentifier>3C992C60-DB5A-9457-E01C-D938AA171146</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\gui\containers">
-      <UniqueIdentifier>F7D260A7-8454-987E-3721-11919E4AF508</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\gui\containers">
-      <UniqueIdentifier>E16D0F9C-27B3-577D-360F-831398BAE703</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\generated\gui_generated\containers">
       <UniqueIdentifier>B0ED9BDE-252A-3B40-1410-34217711084D</UniqueIdentifier>
     </Filter>
@@ -236,9 +230,6 @@
     </ClCompile>
     <ClCompile Include="..\..\generated\gui_generated\src\home_screen\HomeViewBase.cpp">
       <Filter>Source Files\generated\gui_generated\home_screen</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gui\src\containers\ContainerLogLine.cpp">
-      <Filter>Source Files\gui\containers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -690,9 +681,6 @@
     </ClInclude>
     <ClInclude Include="..\..\generated\gui_generated\include\gui_generated\home_screen\HomeViewBase.hpp">
       <Filter>Header Files\generated\gui_generated\home_screen</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\gui\include\gui\containers\ContainerLogLine.hpp">
-      <Filter>Header Files\gui\containers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

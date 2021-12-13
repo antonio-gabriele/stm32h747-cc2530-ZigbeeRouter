@@ -10,14 +10,25 @@ HomePresenter::HomePresenter(HomeView &v) :
 		view(v) {
 }
 
-void HomePresenter::receive(struct AppMessage *message) {
+void HomePresenter::beToUi(struct AppMessage *message) {
 	switch (message->ucMessageID) {
 	case MID_VW_LOG:
-		this->view.show(message->content);
+		this->view.displayMessage(message->content);
 		break;
 	}
 }
 
+void HomePresenter::uiPair() {
+	AppMessage msg = { 0 };
+	msg.ucMessageID = MID_ZB_PAIR;
+	this->model->uiToBe(&msg);
+}
+
+void HomePresenter::uiStart() {
+	AppMessage msg = { 0 };
+	msg.ucMessageID = MID_ZB_START;
+	this->model->uiToBe(&msg);
+}
 
 void HomePresenter::activate() {
 	this->model->bind(this);

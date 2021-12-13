@@ -15,7 +15,7 @@ public:
     {
         model = m;
     }
-    virtual void receive(struct AppMessage * message);
+    virtual void beToUi(struct AppMessage * message);
 protected:
     Model* model;
 };

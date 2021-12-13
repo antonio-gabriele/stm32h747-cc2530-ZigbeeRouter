@@ -5,29 +5,30 @@
 #include <queue.h>
 #include <memory.h>
 
-extern QueueHandle_t xQueueViewToBackend;
-
 HomeView::HomeView() {
 }
 
-void HomeView::show(char *msg) {
-	Unicode::snprintf(textAreaBuffer, TEXTAREA_SIZE, msg);
-	//Unicode::fromUTF8((uint8_t*)msg, textAreaBuffer, TEXTAREA_SIZE);
+void HomeView::displayMessage(char *msg) {
+	uint16_t length = strlen(msg) + 1;
+	Unicode::UnicodeChar *start = textAreaBuffer;
+	Unicode::UnicodeChar *begin = start + length;
+	Unicode::UnicodeChar *stop = start + TEXTAREA_SIZE - 1;
+	while (stop >= begin) {
+		Unicode::UnicodeChar *pointer = stop - length;
+		*stop = *pointer;
+		stop = stop - 1;
+	}
+	Unicode::strncpy(textAreaBuffer, msg, length - 1);
+	Unicode::strncpy(textAreaBuffer + length - 1, "\n", 1);
 	this->textArea.invalidate();
 }
 
 void HomeView::btnPairClick() {
-	AppMessage msg;
-	msg.ucMessageID = MID_ZB_PAIR;
-	memset(msg.content, 0, sizeof(msg.content));
-	xQueueSend(xQueueViewToBackend, (void* ) &msg, (TickType_t ) 0);
+	this->presenter->uiPair();
 }
 
 void HomeView::btnStartClick() {
-	AppMessage msg;
-	msg.ucMessageID = MID_ZB_START;
-	memset(msg.content, 0, sizeof(msg.content));
-	xQueueSend(xQueueViewToBackend, (void* ) &msg, (TickType_t ) 0);
+	this->presenter->uiStart();
 }
 
 void HomeView::setupScreen() {

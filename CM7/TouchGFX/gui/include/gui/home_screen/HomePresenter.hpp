@@ -24,7 +24,9 @@ public:
      * (ie. made inactive). Teardown functionality can be placed here.
      */
     virtual void deactivate();
-    virtual void receive(struct AppMessage *message);
+    virtual void beToUi(struct AppMessage *message);
+    virtual void uiStart();
+    virtual void uiPair();
     virtual ~HomePresenter() {};
 
 private:

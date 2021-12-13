@@ -85,7 +85,7 @@ void task_register_device(void *param) {
 	uint16_t adr = *adr_p;
 
 	// feedback
-	show("[0x%04x] -> Device init started\r\n", adr);
+	show("[0x%04x] -> Device init started", adr);
 
 	// get free device handle
 	zigbee_device_t *dev = zigbee_device_get_free_handle();
@@ -93,7 +93,7 @@ void task_register_device(void *param) {
 	// sanity check
 	if (dev == NULL) {
 		// feedback
-		show("[0x%04x] -> No more free handles\r\n", adr);
+		show("[0x%04x] -> No more free handles", adr);
 
 		// done, stop the task
 		goto end_task;
@@ -105,7 +105,7 @@ void task_register_device(void *param) {
 	// check if the device already exists
 	if (!znp_if_dev_exists(dev->adr_short)) {
 		// feedback
-		show("[0x%04x] -> Device not registered\r\n", dev->adr_short);
+		show("[0x%04x] -> Device not registered", dev->adr_short);
 
 		// done, stop the task
 		goto end_task;
@@ -114,7 +114,7 @@ void task_register_device(void *param) {
 	// refresh device info
 	if (znp_cmd_dev_refresh_info(dev->adr_short) != 0) {
 		// feedback
-		show("[0x%04x] -> Device couldn't be refreshed\r\n", dev->adr_short);
+		show("[0x%04x] -> Device couldn't be refreshed", dev->adr_short);
 
 		// done, stop the task
 		goto end_task;
@@ -123,7 +123,7 @@ void task_register_device(void *param) {
 	// register device info
 	if (znp_cmd_dev_register(dev->adr_short) != 0) {
 		// feedback
-		show("[0x%04x] -> Device couldn't be registered\r\n", dev->adr_short);
+		show("[0x%04x] -> Device couldn't be registered", dev->adr_short);
 
 		// done, stop the task
 		goto end_task;
@@ -132,7 +132,7 @@ void task_register_device(void *param) {
 	// read ieee address
 	if (znp_cmd_dev_get_ieee(dev->adr_short, &dev->adr_ieee) != 0) {
 		// feedback
-		show("[0x%04x] -> Device IEEE couldn't be read\r\n", dev->adr_short);
+		show("[0x%04x] -> Device IEEE couldn't be read", dev->adr_short);
 
 		// done, stop the task
 		goto end_task;
@@ -142,7 +142,7 @@ void task_register_device(void *param) {
 	zcl_cluster_record_t wr;
 	if (znp_cmd_cluster_in_read(dev->adr_short, 0x0000, 0x0004, &wr) != 0) {
 		// feedback
-		show("[0x%04x] -> Device couldn't be read\r\n", dev->adr_short);
+		show("[0x%04x] -> Device couldn't be read", dev->adr_short);
 
 		// done, stop the task
 		goto end_task;
@@ -151,7 +151,7 @@ void task_register_device(void *param) {
 	// check received type
 	if (wr.type != ZCL_CHARACTER_STRING) {
 		// feedback
-		show("[0x%04x] -> Device response type not ok\r\n", dev->adr_short);
+		show("[0x%04x] -> Device response type not ok", dev->adr_short);
 
 		// done, stop the task
 		goto end_task;
@@ -163,7 +163,7 @@ void task_register_device(void *param) {
 	// read device name cluster
 	if (znp_cmd_cluster_in_read(dev->adr_short, 0x0000, 0x0005, &wr) != 0) {
 		// feedback
-		show("[0x%04x] -> Device couldn't be read\r\n", dev->adr_short);
+		show("[0x%04x] -> Device couldn't be read", dev->adr_short);
 
 		// done, stop the task
 		goto end_task;
@@ -172,7 +172,7 @@ void task_register_device(void *param) {
 	// check received type
 	if (wr.type != ZCL_CHARACTER_STRING) {
 		// feedback
-		show("[0x%04x] -> Device response type not ok\r\n", dev->adr_short);
+		show("[0x%04x] -> Device response type not ok", dev->adr_short);
 
 		// done, stop the task
 		goto end_task;
@@ -184,10 +184,10 @@ void task_register_device(void *param) {
 	// print device info
 	uint32_t top = dev->adr_ieee >> 32;
 	uint32_t bot = dev->adr_ieee & 0xffffffff;
-	show("[0x%04x] -> IEEE Address: 0x%08x%08x\r\n", dev->adr_short, top, bot);
-	show("[0x%04x] -> Manufacturer name: %s\r\n", dev->adr_short,
+	show("[0x%04x] -> IEEE Address: 0x%08x%08x", dev->adr_short, top, bot);
+	show("[0x%04x] -> Manufacturer name: %s", dev->adr_short,
 			dev->manufact_name);
-	show("[0x%04x] -> Device name: %s\r\n", dev->adr_short, dev->device_name);
+	show("[0x%04x] -> Device name: %s", dev->adr_short, dev->device_name);
 
 	// save the device
 	zigbee_device_save(dev);
@@ -237,14 +237,14 @@ int znp_init_coordinator(uint8_t enable_commissioning) {
 
 	// wait a second
 	vTaskDelay(1000);
-	show("1 ----------------------\r\n");
+	show("1 ----------------------");
 
 	// soft reset
 	rst.Type = 0x01;
 	sysResetReq(&rst);
 
 	vTaskDelay(4000);
-	show("2 ----------------------\r\n");
+	show("2 ----------------------");
 
 	// Write ZCD_NV_LOGICAL_TYPE to 0 which means coordinator
 	req.Id = 0x0087;
@@ -254,7 +254,7 @@ int znp_init_coordinator(uint8_t enable_commissioning) {
 	sysOsalNvWrite(&req);
 
 	vTaskDelay(1000);
-	show("3 ----------------------\r\n");
+	show("3 ----------------------");
 
 	// set primary channel to 13
 	chn.primaryChannel = 1;
@@ -262,7 +262,7 @@ int znp_init_coordinator(uint8_t enable_commissioning) {
 	appCfgSetChannel(&chn);
 
 	vTaskDelay(1000);
-	show("4 ----------------------\r\n");
+	show("4 ----------------------");
 
 	// disable secondary channel
 	chn.primaryChannel = 0;
@@ -270,21 +270,21 @@ int znp_init_coordinator(uint8_t enable_commissioning) {
 	appCfgSetChannel(&chn);
 
 	vTaskDelay(1000);
-	show("5 ----------------------\r\n");
+	show("5 ----------------------");
 
 	// start commissioning using network formation
 	strt.commissioningMode = CFG_COMM_MODE_NWK_FORMATION;
 	appCfgStartCommissioning(&strt);
 
 	vTaskDelay(10000);
-	show("6 ----------------------\r\n");
+	show("6 ----------------------");
 
 	if (enable_commissioning) {
 		// get device info
 		utilGetDeviceInfo();
 
 		vTaskDelay(1000);
-		show("7 ----------------------\r\n");
+		show("7 ----------------------");
 
 		// Write ZCD_NV_LOGICAL_TYPE to 0 which means coordinator
 		req.Id = 0x008F;
@@ -294,7 +294,7 @@ int znp_init_coordinator(uint8_t enable_commissioning) {
 		sysOsalNvWrite(&req);
 
 		vTaskDelay(1000);
-		show("8 ----------------------\r\n");
+		show("8 ----------------------");
 
 		// start commissioning using network steering
 		strt.commissioningMode = CFG_COMM_MODE_NWK_STEERING;
@@ -313,50 +313,50 @@ void register_clusters(uint16_t addr) {
 
 	// check registration
 	if (!znp_if_dev_exists(addr)) {
-		show("-> !!! Device not registered!\r\n");
+		show("-> !!! Device not registered!");
 		return;
 	}
 
-	show("9 ----------------------\r\n");
+	show("9 ----------------------");
 
 	// wait for device to be active
 	while (1) {
 		int ret = znp_cmd_dev_is_active(addr);
-		show("znp_if_dev_is_active %d\r\n", ret);
+		show("znp_if_dev_is_active %d", ret);
 		if (ret == 0)
 			break;
 		vTaskDelay(1000);
 	}
-	show("10 ----------------------\r\n");
+	show("10 ----------------------");
 
 	// refresh device info
-	show("znp_if_dev_refresh_info %d\r\n", znp_cmd_dev_refresh_info(addr));
+	show("znp_if_dev_refresh_info %d", znp_cmd_dev_refresh_info(addr));
 	vTaskDelay(1000);
-	show("11 ----------------------\r\n");
+	show("11 ----------------------");
 
 	// register device
-	show("znp_if_dev_register %d\r\n", znp_cmd_dev_register(addr));
+	show("znp_if_dev_register %d", znp_cmd_dev_register(addr));
 	vTaskDelay(1000);
-	show("12 ----------------------\r\n");
+	show("12 ----------------------");
 
 	// read device name cluster
 	zcl_cluster_record_t wr;
-	show("znp_cmd_cluster_in_read %d\r\n",
+	show("znp_cmd_cluster_in_read %d",
 			znp_cmd_cluster_in_read(addr, 0, 4, &wr));
-	show("Type: %d\r\n", wr.type);
-	show("Str: %s\r\n", wr.data_arr);
+	show("Type: %d", wr.type);
+	show("Str: %s", wr.data_arr);
 
 	// write thermostat to 19 degree
 	wr.type = ZCL_SIGNED_16BITS;
 	wr.data_i16 = 1900;
-	show("znp_cmd_cluster_in_write %d\r\n",
+	show("znp_cmd_cluster_in_write %d",
 			znp_cmd_cluster_in_write(addr, 0x0201, 0x0012, &wr));
 
 	// read thermostat value
-	show("znp_cmd_cluster_in_read %d\r\n",
+	show("znp_cmd_cluster_in_read %d",
 			znp_cmd_cluster_in_read(addr, 0x0201, 0x0012, &wr));
-	show("Type: %d\r\n", wr.type);
-	show("Data: %d\r\n", wr.data_i16);
+	show("Type: %d", wr.type);
+	show("Data: %d", wr.data_i16);
 }
 
 int32_t startNetwork() {
@@ -374,23 +374,23 @@ int32_t startNetwork() {
 	status = setNVDevType(DEVICETYPE_ROUTER);
 
 	if (status != MT_RPC_SUCCESS) {
-		show("setNVDevType failed\n");
+		show("setNVDevType failed");
 		return 0;
 	}
 
 	status = zdoInit();
 	if (status == NEW_NETWORK) {
-		show("zdoInit NEW_NETWORK\n");
+		show("zdoInit NEW_NETWORK");
 		status = MT_RPC_SUCCESS;
 	} else if (status == RESTORED_NETWORK) {
-		show("zdoInit RESTORED_NETWORK\n");
+		show("zdoInit RESTORED_NETWORK");
 		status = MT_RPC_SUCCESS;
 	} else {
-		show("zdoInit failed\n");
+		show("zdoInit failed");
 		status = -1;
 	}
 
-	show("process zdoStatechange callbacks\n");
+	show("process zdoStatechange callbacks");
 
 	//flush AREQ ZDO State Change messages
 	while (status != -1) {
@@ -414,11 +414,11 @@ uint8_t show(const char *fmt, ...) {
 }
 
 void start() {
-	show("Network starting.\n");
+	show("Network starting");
 	int32_t status;
 	status = setNVStartup(0);
 	if (status != MT_RPC_SUCCESS) {
-		show("Network start failed\n");
+		show("Network start failed");
 		return;
 	}
 	startNetwork();
@@ -432,57 +432,46 @@ void start() {
 }
 
 void pair() {
-	show("Network pairing.\n");
+	show("Network pairing");
 	int32_t status;
 	status = setNVStartup(ZCD_STARTOPT_CLEAR_STATE | ZCD_STARTOPT_CLEAR_CONFIG);
 	if (status != MT_RPC_SUCCESS) {
-		show("Network start failed\n");
+		show("Network start failed");
 		return;
 	}
 	startNetwork();
 }
 
+void vAppTaskLoop() {
+	struct AppMessage xRxedStructure;
+	if (xQueueReceive(xQueueViewToBackend, (struct AppMessage*) &xRxedStructure,
+			(TickType_t) 10) == pdPASS) {
+		switch (xRxedStructure.ucMessageID) {
+		case MID_ZB_START:
+			start();
+			break;
+		case MID_ZB_PAIR:
+			pair();
+			break;
+		}
+	}
+}
+
 /////////////////////////////////////////////////
 void vAppTask(void *pvParameters) {
-	show("System started\r\n");
-
-	// initiailze application interface
+	show("System Started");
 	znp_if_init();
-
-	// initiailze application interface
 	znp_if_init();
 	znp_cmd_init();
-
-	// startup delay
 	vTaskDelay(1000);
-
-	// ping the CC2530 every second until response is ok
 	uint8_t ret = 0;
 	do {
 		vTaskDelay(1000);
 		ret = sysVersion();
 	} while (ret != 0);
-
-	struct AppMessage xRxedStructure;
-	while (1) {
-		if (xQueueReceive(xQueueViewToBackend,
-				(struct AppMessage*) &xRxedStructure, (TickType_t) 10) == pdPASS) {
-			switch (xRxedStructure.ucMessageID) {
-			case MID_ZB_START:
-				start();
-				break;
-			case MID_ZB_PAIR:
-				pair();
-				break;
-			}
-		}
-
-	}
-
-	// endless loop, handle CC2530 packets
-	while (1) {
-		vTaskDelay(1000);
-	}
+	show("State Machine Starting");
+	while (1)
+		vAppTaskLoop();
 }
 
 //init ZDO device state
@@ -546,7 +535,7 @@ Node_t nodeList[MAX_NODE_LIST];
 uint8_t nodeCount = 0;
 static uint8_t mtSysResetIndCb(ResetIndFormat_t *msg) {
 
-	consolePrint("ZNP Version: %d.%d.%d\n", msg->MajorRel, msg->MinorRel,
+	consolePrint("ZNP Version: %d.%d.%d", msg->MajorRel, msg->MinorRel,
 			msg->HwRev);
 	return 0;
 }
@@ -560,55 +549,55 @@ static uint8_t mtZdoStateChangeIndCb(uint8_t newDevState) {
 	switch (newDevState) {
 	case DEV_HOLD:
 		dbg_print(PRINT_LEVEL_INFO,
-				"mtZdoStateChangeIndCb: Initialized - not started automatically\n");
+				"mtZdoStateChangeIndCb: Initialized - not started automatically");
 		break;
 	case DEV_INIT:
 		dbg_print(PRINT_LEVEL_INFO,
-				"mtZdoStateChangeIndCb: Initialized - not connected to anything\n");
+				"mtZdoStateChangeIndCb: Initialized - not connected to anything");
 		break;
 	case DEV_NWK_DISC:
 		dbg_print(PRINT_LEVEL_INFO,
-				"mtZdoStateChangeIndCb: Discovering PAN's to join\n");
-		consolePrint("Network Discovering\n");
+				"mtZdoStateChangeIndCb: Discovering PAN's to join");
+		consolePrint("Network Discovering");
 		break;
 	case DEV_NWK_JOINING:
-		dbg_print(PRINT_LEVEL_INFO, "mtZdoStateChangeIndCb: Joining a PAN\n");
-		consolePrint("Network Joining\n");
+		dbg_print(PRINT_LEVEL_INFO, "mtZdoStateChangeIndCb: Joining a PAN");
+		consolePrint("Network Joining");
 		break;
 	case DEV_NWK_REJOIN:
 		dbg_print(PRINT_LEVEL_INFO,
-				"mtZdoStateChangeIndCb: ReJoining a PAN, only for end devices\n");
-		consolePrint("Network Rejoining\n");
+				"mtZdoStateChangeIndCb: ReJoining a PAN, only for end devices");
+		consolePrint("Network Rejoining");
 		break;
 	case DEV_END_DEVICE_UNAUTH:
-		consolePrint("Network Authenticating\n");
+		consolePrint("Network Authenticating");
 		dbg_print(PRINT_LEVEL_INFO,
-				"mtZdoStateChangeIndCb: Joined but not yet authenticated by trust center\n");
+				"mtZdoStateChangeIndCb: Joined but not yet authenticated by trust center");
 		break;
 	case DEV_END_DEVICE:
-		consolePrint("Network Joined\n");
+		consolePrint("Network Joined");
 		dbg_print(PRINT_LEVEL_INFO,
-				"mtZdoStateChangeIndCb: Started as device after authentication\n");
+				"mtZdoStateChangeIndCb: Started as device after authentication");
 		break;
 	case DEV_ROUTER:
-		consolePrint("Network Joined\n");
+		consolePrint("Network Joined");
 		dbg_print(PRINT_LEVEL_INFO,
-				"mtZdoStateChangeIndCb: Device joined, authenticated and is a router\n");
+				"mtZdoStateChangeIndCb: Device joined, authenticated and is a router");
 		break;
 	case DEV_COORD_STARTING:
-		consolePrint("Network Starting\n");
+		consolePrint("Network Starting");
 		dbg_print(PRINT_LEVEL_INFO,
-				"mtZdoStateChangeIndCb: Started as Zigbee Coordinator\n");
+				"mtZdoStateChangeIndCb: Started as Zigbee Coordinator");
 		break;
 	case DEV_ZB_COORD:
-		consolePrint("Network Started\n");
+		consolePrint("Network Started");
 		dbg_print(PRINT_LEVEL_INFO,
-				"mtZdoStateChangeIndCb: Started as Zigbee Coordinator\n");
+				"mtZdoStateChangeIndCb: Started as Zigbee Coordinator");
 		break;
 	case DEV_NWK_ORPHAN:
-		consolePrint("Network Orphaned\n");
+		consolePrint("Network Orphaned");
 		dbg_print(PRINT_LEVEL_INFO,
-				"mtZdoStateChangeIndCb: Device has lost information about its parent\n");
+				"mtZdoStateChangeIndCb: Device has lost information about its parent");
 		break;
 	default:
 		dbg_print(PRINT_LEVEL_INFO, "mtZdoStateChangeIndCb: unknown state");
@@ -653,7 +642,7 @@ static uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t *msg) {
 			}
 		}
 	} else {
-		consolePrint("MgmtLqiRsp Status: FAIL 0x%02X\n", msg->Status);
+		consolePrint("MgmtLqiRsp Status: FAIL 0x%02X", msg->Status);
 	}
 
 	return msg->Status;
@@ -670,9 +659,9 @@ static uint8_t setNVStartup(uint8_t startupOption) {
 	nvWrite.Len = 1;
 	nvWrite.Value[0] = startupOption;
 	status = sysOsalNvWrite(&nvWrite);
-	dbg_print(PRINT_LEVEL_INFO, "\n");
+	dbg_print(PRINT_LEVEL_INFO, "");
 
-	dbg_print(PRINT_LEVEL_INFO, "NV Write Startup Option cmd sent[%d]...\n",
+	dbg_print(PRINT_LEVEL_INFO, "NV Write Startup Option cmd sent[%d]..",
 			status);
 
 	return status;
@@ -687,8 +676,8 @@ static uint8_t setNVDevType(uint8_t devType) {
 	nvWrite.Len = 1;
 	nvWrite.Value[0] = devType;
 	status = sysOsalNvWrite(&nvWrite);
-	dbg_print(PRINT_LEVEL_INFO, "\n");
-	dbg_print(PRINT_LEVEL_INFO, "NV Write Device Type cmd sent... [%d]\n",
+	dbg_print(PRINT_LEVEL_INFO, "");
+	dbg_print(PRINT_LEVEL_INFO, "NV Write Device Type cmd sent... [%d]",
 			status);
 
 	return status;
@@ -698,8 +687,8 @@ static uint8_t setNVPanID(uint32_t panId) {
 	uint8_t status;
 	OsalNvWriteFormat_t nvWrite;
 
-	dbg_print(PRINT_LEVEL_INFO, "\n");
-	dbg_print(PRINT_LEVEL_INFO, "NV Write PAN ID cmd sending...\n");
+	dbg_print(PRINT_LEVEL_INFO, "");
+	dbg_print(PRINT_LEVEL_INFO, "NV Write PAN ID cmd sending..");
 
 	nvWrite.Id = ZCD_NV_PANID;
 	nvWrite.Offset = 0;
@@ -707,8 +696,8 @@ static uint8_t setNVPanID(uint32_t panId) {
 	nvWrite.Value[0] = LO_UINT16(panId);
 	nvWrite.Value[1] = HI_UINT16(panId);
 	status = sysOsalNvWrite(&nvWrite);
-	dbg_print(PRINT_LEVEL_INFO, "\n");
-	dbg_print(PRINT_LEVEL_INFO, "NV Write PAN ID cmd sent...[%d]\n", status);
+	dbg_print(PRINT_LEVEL_INFO, "");
+	dbg_print(PRINT_LEVEL_INFO, "NV Write PAN ID cmd sent...[%d]", status);
 
 	return status;
 }
@@ -725,8 +714,8 @@ static uint8_t setNVChanList(uint32_t chanList) {
 	nvWrite.Value[2] = BREAK_UINT32(chanList, 2);
 	nvWrite.Value[3] = BREAK_UINT32(chanList, 3);
 	status = sysOsalNvWrite(&nvWrite);
-	dbg_print(PRINT_LEVEL_INFO, "\n");
-	dbg_print(PRINT_LEVEL_INFO, "NV Write Channel List cmd sent...[%d]\n",
+	dbg_print(PRINT_LEVEL_INFO, "");
+	dbg_print(PRINT_LEVEL_INFO, "NV Write Channel List cmd sent...[%d]",
 			status);
 
 	return status;
@@ -764,7 +753,7 @@ uint32_t appInit(void) {
 		}
 	}
 
-	dbg_print(PRINT_LEVEL_INFO, "flushed %d message from msg queue\n", msgCnt);
+	dbg_print(PRINT_LEVEL_INFO, "flushed %d message from msg queue", msgCnt);
 
 	//Register Callbacks MT system callbacks
 	sysRegisterCallbacks(mtSysCb);
@@ -789,11 +778,11 @@ uint32_t appInit(void) {
  status = startNetwork();
  if (status != -1)
  {
- consolePrint("Network up\n\n");
+ consolePrint("Network up\n");
  }
  else
  {
- consolePrint("Network Error\n\n");
+ consolePrint("Network Error\n");
  }
 
  sysGetExtAddr();
@@ -811,7 +800,7 @@ uint32_t appInit(void) {
  req.StartIndex = 0;
  while (1)
  {
- consolePrint("Press Enter to discover Network Topology:\n");
+ consolePrint("Press Enter to discover Network Topology:");
 
  consoleGetLine(cmd, 128);
  nodeCount = 0;
@@ -832,19 +821,19 @@ uint32_t appInit(void) {
  {
  devtype = "COORDINATOR";
  }
- consolePrint("Node Address: 0x%04X   Type: %s\n",
+ consolePrint("Node Address: 0x%04X   Type: %s",
  nodeList[i].NodeAddr, devtype);
 
- consolePrint("Children: %d\n", nodeList[i].ChildCount);
+ consolePrint("Children: %d", nodeList[i].ChildCount);
  uint8_t cI;
  for (cI = 0; cI < nodeList[i].ChildCount; cI++)
  {
  uint8_t type = nodeList[i].childs[cI].Type;
- consolePrint("\tAddress: 0x%04X   Type: %s\n",
+ consolePrint("\tAddress: 0x%04X   Type: %s",
  nodeList[i].childs[cI].ChildAddr,
  (type == DEVICETYPE_ROUTER ? "ROUTER" : "END DEVICE"));
  }
- consolePrint("\n");
+ consolePrint("");
  }
  }
  return 0;
@@ -862,7 +851,7 @@ void vApplicationMallocFailedHook(void) {
 	 FreeRTOSConfig.h, and the xPortGetFreeHeapSize() API function can be used
 	 to query the size of free heap space that remains (although it does not
 	 provide information on how the remaining heap might be fragmented). */
-	show("-> !!! Malloc failed\r\n");
+	show("-> !!! Malloc failed");
 	while (1)
 		;
 }
