@@ -1,5 +1,6 @@
 #include <appTask.h>
 #include "cmsis_os.h"
+#include "flash.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -16,7 +17,9 @@
 #include "znp_if.h"
 #include <FreeRTOS.h>
 #include <queue.h>
-
+/**/
+extern struct config_t configuration;
+/**/
 extern QueueHandle_t xQueueBackendToView;
 
 #define MAX_CHILDREN 10
@@ -68,23 +71,21 @@ extern QueueHandle_t xQueueViewToBackend;
 
 // SYS callbacks
 static mtSysCb_t mtSysCb = {
-		NULL,
-		NULL,
-		NULL,
-		mtSysResetIndCb,
-		mtSysVersionCb,
-		NULL,
-		NULL,
-		NULL,
-		NULL,
-		NULL,
-		NULL,
-		NULL,
-		NULL,
-		NULL };
+NULL,
+NULL,
+NULL, mtSysResetIndCb, mtSysVersionCb,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL };
 
 static mtZdoCb_t mtZdoCb = {
-		NULL,       // MT_ZDO_NWK_ADDR_RSP
+NULL,       // MT_ZDO_NWK_ADDR_RSP
 		NULL,      // MT_ZDO_IEEE_ADDR_RSP
 		NULL,      // MT_ZDO_NODE_DESC_RSP
 		NULL,     // MT_ZDO_POWER_DESC_RSP
@@ -420,48 +421,6 @@ void register_clusters(uint16_t addr) {
 	show("Data: %d", wr.data_i16);
 }
 
-int32_t startNetwork() {
-	char cDevType;
-	uint8_t devType;
-	int32_t status;
-	uint8_t newNwk = 0;
-	char sCh[128];
-	ResetReqFormat_t resReq;
-	resReq.Type = 1;
-	sysResetReq(&resReq);
-	//flush the rsp
-	rpcWaitMqClientMsg(5000);
-	registerAf();
-	status = setNVDevType(DEVICETYPE_ROUTER);
-
-	if (status != MT_RPC_SUCCESS) {
-		show("setNVDevType failed");
-		return 0;
-	}
-
-	status = zdoInit();
-	if (status == NEW_NETWORK) {
-		show("zdoInit NEW_NETWORK");
-		status = MT_RPC_SUCCESS;
-	} else if (status == RESTORED_NETWORK) {
-		show("zdoInit RESTORED_NETWORK");
-		status = MT_RPC_SUCCESS;
-	} else {
-		show("zdoInit failed");
-		status = -1;
-	}
-
-	show("process zdoStatechange callbacks");
-
-	//flush AREQ ZDO State Change messages
-	while (status != -1) {
-		status = rpcWaitMqClientMsg(5000);
-	}
-	//set startup option back to keep configuration in case of reset
-	status = setNVStartup(0);
-	return status;
-}
-
 uint8_t show(const char *fmt, ...) {
 	struct AppMessage msg;
 	msg.ucMessageID = MID_VW_LOG;
@@ -474,33 +433,83 @@ uint8_t show(const char *fmt, ...) {
 	return 0;
 }
 
-void start() {
-	show("Network starting");
-	int32_t status;
-	status = setNVStartup(0);
-	if (status != MT_RPC_SUCCESS) {
-		show("Network start failed");
-		return;
-	}
-	startNetwork();
-	/*
-	 // initialize coordinator
-	 znp_init_coordinator(0);
-
-	 // register cluster
-	 register_clusters(0x82bc);
-	 */
-}
-
-void pair() {
-	show("Network pairing.");
+void reset(uint8_t devType) {
+	show("Clear configuration");
 	int32_t status;
 	status = setNVStartup(ZCD_STARTOPT_CLEAR_STATE | ZCD_STARTOPT_CLEAR_CONFIG);
 	if (status != MT_RPC_SUCCESS) {
-		show("Network start failed");
+		show("Clear configuration failed");
 		return;
 	}
-	startNetwork();
+	ResetReqFormat_t resReq = { .Type = 1 };
+	sysResetReq(&resReq);
+	vTaskDelay(4000);
+	/**/
+	status = setNVStartup(0);
+	if (status != MT_RPC_SUCCESS) {
+		show("Reset failed");
+		return;
+	}
+	/**/
+	show("Set device type");
+	status = setNVDevType(devType);
+	if (status != MT_RPC_SUCCESS) {
+		show("Set device type failed");
+	}
+	sysResetReq(&resReq);
+	vTaskDelay(1000);
+}
+
+void resetCoo() {
+	reset(DEVICETYPE_COORDINATOR);
+}
+
+void resetRtr() {
+	reset(DEVICETYPE_ROUTER);
+}
+
+void scan() {
+
+}
+
+void start() {
+	show("Starting");
+	/*
+	 int32_t status;
+	 char cDevType;
+	 uint8_t devType;
+	 int32_t status;
+	 uint8_t newNwk = 0;
+	 char sCh[128];
+	 ResetReqFormat_t resReq;
+	 resReq.Type = 1;
+	 sysResetReq(&resReq);
+	 //flush the rsp
+	 rpcWaitMqClientMsg(5000);
+	 registerAf();
+	 if (status != MT_RPC_SUCCESS) {
+	 show("setNVDevType failed");
+	 return 0;
+	 }
+	 */
+	uint8_t status = zdoInit();
+	if (status == NEW_NETWORK) {
+		show("Start new network");
+		status = MT_RPC_SUCCESS;
+	} else if (status == RESTORED_NETWORK) {
+		show("Restored network");
+		status = MT_RPC_SUCCESS;
+	} else {
+		show("Start failed");
+		status = -1;
+	}
+	show("ZigBee state machine running");
+	/*
+	 while (status != -1) {
+	 status = rpcWaitMqClientMsg(5000);
+	 }
+	 status = setNVStartup(0);
+	 */
 }
 
 void vAppTaskLoop() {
@@ -508,22 +517,28 @@ void vAppTaskLoop() {
 	if (xQueueReceive(xQueueViewToBackend, (struct AppMessage*) &xRxedStructure,
 			(TickType_t) 10) == pdPASS) {
 		switch (xRxedStructure.ucMessageID) {
-		case MID_ZB_START:
+		case MID_ZB_RESET_COO:
+			resetCoo();
+			break;
+		case MID_ZB_RESET_RTR:
+			resetRtr();
+			break;
+		case MID_ZB_ZBEE_START:
 			start();
 			break;
-		case MID_ZB_PAIR:
-			pair();
+		case MID_ZB_ZBEE_SCAN:
+			scan();
 			break;
 		}
 	}
+	rpcWaitMqClientMsg(10);
 }
 
 /////////////////////////////////////////////////
 void vAppTask(void *pvParameters) {
-	show("State Machine Starting.");
 	sysRegisterCallbacks(mtSysCb);
 	zdoRegisterCallbacks(mtZdoCb);
-	show("System Started.");
+	show("System started");
 	znp_if_init();
 	znp_if_init();
 	znp_cmd_init();
@@ -533,7 +548,7 @@ void vAppTask(void *pvParameters) {
 		vTaskDelay(1000);
 		ret = sysVersion();
 	} while (ret != 0);
-	show("Loop Started.");
+	show("Event loop started");
 	while (1)
 		vAppTaskLoop();
 }
@@ -586,7 +601,8 @@ static uint8_t mtZdoStateChangeIndCb(uint8_t newDevState) {
 		break;
 	case DEV_END_DEVICE_UNAUTH:
 		show("Network Authenticating");
-		show("mtZdoStateChangeIndCb: Joined but not yet authenticated by trust center");
+		show(
+				"mtZdoStateChangeIndCb: Joined but not yet authenticated by trust center");
 		break;
 	case DEV_END_DEVICE:
 		show("Network Joined");
@@ -594,7 +610,8 @@ static uint8_t mtZdoStateChangeIndCb(uint8_t newDevState) {
 		break;
 	case DEV_ROUTER:
 		show("Network Joined");
-		show("mtZdoStateChangeIndCb: Device joined, authenticated and is a router");
+		show(
+				"mtZdoStateChangeIndCb: Device joined, authenticated and is a router");
 		break;
 	case DEV_COORD_STARTING:
 		show("Network Starting");
@@ -606,7 +623,8 @@ static uint8_t mtZdoStateChangeIndCb(uint8_t newDevState) {
 		break;
 	case DEV_NWK_ORPHAN:
 		show("Network Orphaned");
-		show("mtZdoStateChangeIndCb: Device has lost information about its parent");
+		show(
+				"mtZdoStateChangeIndCb: Device has lost information about its parent");
 		break;
 	default:
 		show("mtZdoStateChangeIndCb: unknown state");
@@ -677,18 +695,9 @@ static uint8_t setNVStartup(uint8_t startupOption) {
 }
 
 static uint8_t setNVDevType(uint8_t devType) {
-	uint8_t status;
-	OsalNvWriteFormat_t nvWrite;
-	// setting dev type
-	nvWrite.Id = ZCD_NV_LOGICAL_TYPE;
-	nvWrite.Offset = 0;
-	nvWrite.Len = 1;
-	nvWrite.Value[0] = devType;
-	status = sysOsalNvWrite(&nvWrite);
-	show("NV Write Device Type cmd sent... [%d]",
-			status);
-
-	return status;
+	OsalNvWriteFormat_t nvWrite = { .Id = ZCD_NV_LOGICAL_TYPE, .Offset = 0,
+			.Len = 1, .Value[0] = devType };
+	return sysOsalNvWrite(&nvWrite);
 }
 
 static uint8_t setNVPanID(uint32_t panId) {

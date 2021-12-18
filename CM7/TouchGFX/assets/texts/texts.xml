@@ -2,13 +2,19 @@
 <TextDatabase xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="texts.xsd" Version="4.18.0">
   <Texts>
     <Text Id="__SingleUse_K4HK" TypographyId="Default" Alignment="Center" Direction="LTR">
-      <Translation Language="GB">Pair</Translation>
+      <Translation Language="GB">Reset -&gt; RTR</Translation>
     </Text>
     <Text Id="__SingleUse_JRER" TypographyId="Default" Alignment="Center" Direction="LTR">
-      <Translation Language="GB">Start</Translation>
+      <Translation Language="GB">Reset -&gt; COO</Translation>
     </Text>
     <Text Id="__SingleUse_1EDP" TypographyId="Default" Alignment="Left" Direction="LTR">
       <Translation Language="GB">&lt;text&gt;</Translation>
+    </Text>
+    <Text Id="__SingleUse_UX1N" TypographyId="Default" Alignment="Center" Direction="LTR">
+      <Translation Language="GB">Start</Translation>
+    </Text>
+    <Text Id="__SingleUse_CJB7" TypographyId="Default" Alignment="Center" Direction="LTR">
+      <Translation Language="GB">Scan</Translation>
     </Text>
   </Texts>
   <Typographies>

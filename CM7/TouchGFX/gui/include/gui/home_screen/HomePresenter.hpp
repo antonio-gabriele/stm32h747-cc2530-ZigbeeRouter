@@ -25,8 +25,7 @@ public:
      */
     virtual void deactivate();
     virtual void beToUi(struct AppMessage *message);
-    virtual void uiStart();
-    virtual void uiPair();
+    virtual void uiToBe(struct AppMessage *message);
     virtual ~HomePresenter() {};
 
 private:

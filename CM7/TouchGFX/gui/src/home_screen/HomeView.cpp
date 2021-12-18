@@ -19,12 +19,24 @@ void HomeView::displayMessage(char *msg) {
 	this->textArea.invalidate();
 }
 
-void HomeView::btnPairClick() {
-	this->presenter->uiPair();
+void HomeView::btnScanClick() {
+	AppMessage msg = { .ucMessageID = MID_ZB_ZBEE_SCAN };
+	this->presenter->uiToBe(&msg);
 }
 
 void HomeView::btnStartClick() {
-	this->presenter->uiStart();
+	AppMessage msg = { .ucMessageID = MID_ZB_ZBEE_START };
+	this->presenter->uiToBe(&msg);
+}
+
+void HomeView::btnResetCooClick() {
+	AppMessage msg = { .ucMessageID = MID_ZB_RESET_COO };
+	this->presenter->uiToBe(&msg);
+}
+
+void HomeView::btnResetRtrClick() {
+	AppMessage msg = { .ucMessageID = MID_ZB_RESET_RTR };
+	this->presenter->uiToBe(&msg);
 }
 
 void HomeView::setupScreen() {

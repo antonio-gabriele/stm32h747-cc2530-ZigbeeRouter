@@ -18,16 +18,8 @@ void HomePresenter::beToUi(struct AppMessage *message) {
 	}
 }
 
-void HomePresenter::uiPair() {
-	AppMessage msg = { 0 };
-	msg.ucMessageID = MID_ZB_PAIR;
-	this->model->uiToBe(&msg);
-}
-
-void HomePresenter::uiStart() {
-	AppMessage msg = { 0 };
-	msg.ucMessageID = MID_ZB_START;
-	this->model->uiToBe(&msg);
+void HomePresenter::uiToBe(struct AppMessage *message) {
+	this->model->uiToBe(message);
 }
 
 void HomePresenter::activate() {
