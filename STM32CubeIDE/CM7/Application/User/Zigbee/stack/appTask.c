@@ -441,6 +441,8 @@ void reset(uint8_t devType) {
 		show("Clear configuration failed");
 		return;
 	}
+	sys_cfg.devType = devType;
+	cfgWrite();
 	ResetReqFormat_t resReq = { .Type = 1 };
 	sysResetReq(&resReq);
 	vTaskDelay(4000);
@@ -449,12 +451,6 @@ void reset(uint8_t devType) {
 	if (status != MT_RPC_SUCCESS) {
 		show("Reset failed");
 		return;
-	}
-	/**/
-	show("Set device type");
-	status = setNVDevType(devType);
-	if (status != MT_RPC_SUCCESS) {
-		show("Set device type failed");
 	}
 	sysResetReq(&resReq);
 	vTaskDelay(1000);
@@ -474,25 +470,22 @@ void scan() {
 
 void start() {
 	show("Starting");
-	/*
-	 int32_t status;
-	 char cDevType;
-	 uint8_t devType;
-	 int32_t status;
-	 uint8_t newNwk = 0;
-	 char sCh[128];
-	 ResetReqFormat_t resReq;
-	 resReq.Type = 1;
-	 sysResetReq(&resReq);
-	 //flush the rsp
-	 rpcWaitMqClientMsg(5000);
-	 registerAf();
-	 if (status != MT_RPC_SUCCESS) {
-	 show("setNVDevType failed");
-	 return 0;
-	 }
-	 */
-	uint8_t status = zdoInit();
+	ResetReqFormat_t resReq = { .Type = 1 };
+	sysResetReq(&resReq);
+	rpcWaitMqClientMsg(5000);
+	show("Set device type");
+	OsalNvWriteFormat_t nvWrite = { .Id = ZCD_NV_LOGICAL_TYPE, .Offset = 0,
+			.Len = 1, .Value[0] = sys_cfg.devType };
+	uint8_t status = sysOsalNvWrite(&nvWrite);
+	if (status != MT_RPC_SUCCESS) {
+		show("Set device type failed");
+	}
+	registerAf();
+	if (status != MT_RPC_SUCCESS) {
+		show("setNVDevType failed");
+		return 0;
+	}
+	status = zdoInit();
 	if (status == NEW_NETWORK) {
 		show("Start new network");
 		status = MT_RPC_SUCCESS;
@@ -536,6 +529,7 @@ void vAppTaskLoop() {
 
 /////////////////////////////////////////////////
 void vAppTask(void *pvParameters) {
+	cfgRead();
 	sysRegisterCallbacks(mtSysCb);
 	zdoRegisterCallbacks(mtZdoCb);
 	show("System started");
@@ -692,12 +686,6 @@ static uint8_t setNVStartup(uint8_t startupOption) {
 			status);
 
 	return status;
-}
-
-static uint8_t setNVDevType(uint8_t devType) {
-	OsalNvWriteFormat_t nvWrite = { .Id = ZCD_NV_LOGICAL_TYPE, .Offset = 0,
-			.Len = 1, .Value[0] = devType };
-	return sysOsalNvWrite(&nvWrite);
 }
 
 static uint8_t setNVPanID(uint32_t panId) {
