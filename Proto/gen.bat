@@ -1,0 +1,2 @@
+D:\Programmi\nanopb-0.4.5-windows-x86\generator-bin\protoc configuration.proto -oconfiguration.pb
+D:\Programmi\nanopb-0.4.5-windows-x86\generator-bin\protoc --plugin=protoc-gen-nanopb=D:\Programmi\nanopb-0.4.5-windows-x86\generator\protoc-gen-nanopb.bat --nanopb_out=../STM32CubeIDE/CM7/Application/User/Proto configuration.proto
