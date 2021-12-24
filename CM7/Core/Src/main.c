@@ -77,6 +77,7 @@ OTM8009A_IO_t IOCtx;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+void PeriphCommonClock_Config(void);
 static void MPU_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_CRC_Init(void);
@@ -140,6 +141,9 @@ int main(void)
 
   /* Configure the system clock */
   SystemClock_Config();
+
+/* Configure the peripherals common clocks */
+  PeriphCommonClock_Config();
 /* USER CODE BEGIN Boot_Mode_Sequence_2 */
 	/* When system initialization is finished, Cortex-M7 will release Cortex-M4 by means of
 	 HSEM notification */
@@ -238,7 +242,7 @@ void SystemClock_Config(void)
   HAL_PWREx_ConfigSupply(PWR_DIRECT_SMPS_SUPPLY);
   /** Configure the main internal regulator output voltage
   */
-  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
   while(!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
   /** Macro to configure the PLL clock source
@@ -283,6 +287,24 @@ void SystemClock_Config(void)
     Error_Handler();
   }
   HAL_RCC_MCOConfig(RCC_MCO1, RCC_MCO1SOURCE_HSI, RCC_MCODIV_1);
+}
+
+/**
+  * @brief Peripherals Common Clock Configuration
+  * @retval None
+  */
+void PeriphCommonClock_Config(void)
+{
+  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
+
+  /** Initializes the peripherals clock
+  */
+  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_CKPER;
+  PeriphClkInitStruct.CkperClockSelection = RCC_CLKPSOURCE_HSI;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
 }
 
 /**
@@ -570,12 +592,12 @@ static void MX_QUADSPI_Init(void)
   /* USER CODE END QUADSPI_Init 1 */
   /* QUADSPI parameter configuration*/
   hqspi.Instance = QUADSPI;
-  hqspi.Init.ClockPrescaler = 3;
-  hqspi.Init.FifoThreshold = 1;
-  hqspi.Init.SampleShifting = QSPI_SAMPLE_SHIFTING_NONE;
-  hqspi.Init.FlashSize = 1;
-  hqspi.Init.ChipSelectHighTime = QSPI_CS_HIGH_TIME_1_CYCLE;
-  hqspi.Init.ClockMode = QSPI_CLOCK_MODE_0;
+  hqspi.Init.ClockPrescaler = 1;
+  hqspi.Init.FifoThreshold = 4;
+  hqspi.Init.SampleShifting = QSPI_SAMPLE_SHIFTING_HALFCYCLE;
+  hqspi.Init.FlashSize = 26;
+  hqspi.Init.ChipSelectHighTime = QSPI_CS_HIGH_TIME_8_CYCLE;
+  hqspi.Init.ClockMode = QSPI_CLOCK_MODE_3;
   hqspi.Init.DualFlash = QSPI_DUALFLASH_ENABLE;
   if (HAL_QSPI_Init(&hqspi) != HAL_OK)
   {
@@ -589,6 +611,7 @@ static void MX_QUADSPI_Init(void)
 	if (BSP_QSPI_Init(0, &init) != BSP_ERROR_NONE) {
 		Error_Handler();
 	}
+
 	if (BSP_QSPI_EnableMemoryMappedMode(0) != BSP_ERROR_NONE) {
 		Error_Handler();
 	}
@@ -883,4 +906,3 @@ void assert_failed(uint8_t *file, uint32_t line)
 }
 #endif /* USE_FULL_ASSERT */
 
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

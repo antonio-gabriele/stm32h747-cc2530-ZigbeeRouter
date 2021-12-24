@@ -6,6 +6,9 @@
 
 extern my_Configuration sys_cfg;
 
+#define CFG_OK 		0
+#define CFG_ERR 	1
+
 uint8_t cfgRead();
 uint8_t cfgWrite();
 
