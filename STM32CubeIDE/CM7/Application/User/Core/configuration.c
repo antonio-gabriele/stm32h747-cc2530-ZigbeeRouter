@@ -13,8 +13,6 @@ my_Configuration sys_cfg = my_Configuration_init_zero;
 #define READ_ADDR 			(uint8_t*)(0x90000000 + WRITE_ADDR)
 #define MAGIC_NUMBER 		((uint8_t)0xAA)
 
-uint8_t qspi_aTxBuffer[BUFFER_SIZE];
-uint8_t * xxx = "123456789123456789";
 /*
  uint8_t cfgPrepare() {
  uint8_t status;
@@ -96,13 +94,11 @@ uint8_t cfgEnableMemoryMappedMode() {
 
 uint8_t cfgRead() {
 
-	uint8_t *start = READ_ADDR;
-
 	if (*(READ_ADDR ) != MAGIC_NUMBER) {
 		return CFG_ERR;
 	}
 
-	uint32_t bytes_written = *(uint32_t*) (READ_ADDR + 1);
+	uint32_t bytes_written = *(READ_ADDR + 1);
 
 	pb_istream_t stream = pb_istream_from_buffer(READ_ADDR + 5, bytes_written);
 	bool o = pb_decode(&stream, my_Configuration_fields, &sys_cfg);
@@ -115,16 +111,17 @@ uint8_t cfgRead() {
 }
 
 uint8_t cfgWrite() {
-	*qspi_aTxBuffer = (uint8_t) (0xAA);
+	uint8_t qspi_aTxBuffer[BUFFER_SIZE];
 
 	pb_ostream_t stream = pb_ostream_from_buffer((qspi_aTxBuffer + 5),
-			sizeof(qspi_aTxBuffer));
+			sizeof(qspi_aTxBuffer) - 5);
 	bool o = pb_encode(&stream, my_Configuration_fields, &sys_cfg);
 
 	if (o == false) {
 		return CFG_ERR;
 	}
 
+	*qspi_aTxBuffer = (uint8_t) (0xAA);
 	*(qspi_aTxBuffer + 1) = stream.bytes_written;
 
 	uint8_t status;
@@ -138,17 +135,12 @@ uint8_t cfgWrite() {
 		return CFG_ERR;
 	}
 
-	status = BSP_QSPI_Write(0, xxx, WRITE_ADDR, BUFFER_SIZE);
+	status = BSP_QSPI_Write(0, qspi_aTxBuffer, WRITE_ADDR, BUFFER_SIZE);
 	if (status != BSP_ERROR_NONE) {
 		return CFG_ERR;
 	}
 
 	status = cfgEnableMemoryMappedMode();
-	if (status != BSP_ERROR_NONE) {
-		return CFG_ERR;
-	}
-
-	status = cfgRead();
 	if (status != BSP_ERROR_NONE) {
 		return CFG_ERR;
 	}

@@ -273,7 +273,7 @@ void rcpWaitPeriod(uint32_t period) {
 	}
 }
 
-void znp_nvm_reset(void) {
+void phyReset(void) {
 	ResetReqFormat_t rst;
 	OsalNvWriteFormat_t req;
 
@@ -443,8 +443,7 @@ void reset(uint8_t devType) {
 	}
 	sys_cfg.devType = devType;
 	cfgWrite();
-	ResetReqFormat_t resReq = { .Type = 1 };
-	sysResetReq(&resReq);
+	phyReset();
 	vTaskDelay(4000);
 	/**/
 	status = setNVStartup(0);
@@ -452,7 +451,7 @@ void reset(uint8_t devType) {
 		show("Reset failed");
 		return;
 	}
-	sysResetReq(&resReq);
+	phyReset();
 	vTaskDelay(1000);
 }
 
@@ -479,11 +478,12 @@ void start() {
 	uint8_t status = sysOsalNvWrite(&nvWrite);
 	if (status != MT_RPC_SUCCESS) {
 		show("Set device type failed");
+		return;
 	}
-	registerAf();
+	status = registerAf();
 	if (status != MT_RPC_SUCCESS) {
-		show("setNVDevType failed");
-		return 0;
+		show("Register Af failed");
+		return;
 	}
 	status = zdoInit();
 	if (status == NEW_NETWORK) {
