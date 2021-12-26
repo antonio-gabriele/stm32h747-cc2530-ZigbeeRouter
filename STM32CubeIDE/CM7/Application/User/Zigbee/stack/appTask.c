@@ -1,6 +1,5 @@
 #include <appTask.h>
 #include "cmsis_os.h"
-#include "flash.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -17,18 +16,24 @@
 #include "znp_if.h"
 #include <FreeRTOS.h>
 #include <queue.h>
+#include <configuration.h>
 /**/
-extern struct config_t configuration;
+extern my_Configuration sys_cfg;
 /**/
 extern QueueHandle_t xQueueBackendToView;
 
 #define MAX_CHILDREN 10
 #define MAX_NODE_LIST 10
-
+//
+devStates_t devState = DEV_HOLD;
+//
+static int32_t startNetwork1(void);
 //ZDO Callbacks
 static uint8_t mtZdoStateChangeIndCb(uint8_t newDevState);
 static uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t *msg);
-
+static uint8_t mtZdoSimpleDescRspCb(SimpleDescRspFormat_t *msg);
+static uint8_t mtZdoEndDeviceAnnceIndCb(EndDeviceAnnceIndFormat_t *msg);
+static uint8_t mtZdoActiveEpRspCb(ActiveEpRspFormat_t *msg);
 //SYS Callbacks
 static uint8_t mtSysResetIndCb(ResetIndFormat_t *msg);
 static uint8_t mtSysVersionCb(VersionSrspFormat_t *msg);
