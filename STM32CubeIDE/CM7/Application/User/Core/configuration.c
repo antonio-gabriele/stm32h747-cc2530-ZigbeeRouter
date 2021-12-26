@@ -5,48 +5,13 @@
 #include <pb_encode.h>
 #include <stm32h747i_discovery_qspi.h>
 
-my_Configuration sys_cfg = my_Configuration_init_zero;
-
 #define BUFFER_SIZE         ((uint32_t)0x2000)
 #define FLASH_ADDR 			((uint32_t)0x0050)
 #define WRITE_ADDR 			((uint32_t)(FLASH_ADDR * 0x2000))
 #define READ_ADDR 			(uint8_t*)(0x90000000 + WRITE_ADDR)
 #define MAGIC_NUMBER 		((uint8_t)0xAA)
 
-/*
- uint8_t cfgPrepare() {
- uint8_t status;
-
- BSP_QSPI_Init_t init;
- init.InterfaceMode = MT25TL01G_QPI_MODE;
- init.TransferRate = MT25TL01G_DTR_TRANSFER;
- init.DualFlashMode = MT25TL01G_DUALFLASH_ENABLE;
- status = BSP_QSPI_Init(0, &init);
-
- if (status != BSP_ERROR_NONE) {
- return CFG_ERR;
- }
-
- BSP_QSPI_Info_t pQSPI_Info;
- pQSPI_Info.FlashSize = (uint32_t) 0x00;
- pQSPI_Info.EraseSectorSize = (uint32_t) 0x00;
- pQSPI_Info.EraseSectorsNumber = (uint32_t) 0x00;
- pQSPI_Info.ProgPageSize = (uint32_t) 0x00;
- pQSPI_Info.ProgPagesNumber = (uint32_t) 0x00;
-
- BSP_QSPI_GetInfo(0, &pQSPI_Info);
-
- if ((pQSPI_Info.FlashSize != 0x8000000)
- || (pQSPI_Info.EraseSectorSize != 0x2000)
- || (pQSPI_Info.ProgPageSize != 0x100)
- || (pQSPI_Info.EraseSectorsNumber != 0x4000)
- || (pQSPI_Info.ProgPagesNumber != 0x80000)) {
- return CFG_ERR;
- }
-
- return CFG_OK;
- }
- */
+my_Configuration sys_cfg = my_Configuration_init_zero;
 
 uint8_t reInit() {
 	BSP_QSPI_DeInit(0);

@@ -4,8 +4,6 @@
 #include <configuration.pb.h>
 #include <stdint.h>
 
-extern my_Configuration sys_cfg;
-
 #define CFG_OK 		0
 #define CFG_ERR 	1
 
