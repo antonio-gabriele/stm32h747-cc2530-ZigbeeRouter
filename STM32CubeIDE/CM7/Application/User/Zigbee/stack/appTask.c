@@ -26,6 +26,7 @@ extern QueueHandle_t xQueueBackendToView;
 #define MAX_NODE_LIST 10
 //
 devStates_t devState = DEV_HOLD;
+ResetReqFormat_t const_hard_rst = { .Type = 0 };
 //
 static int32_t startNetwork1(void);
 //ZDO Callbacks
@@ -279,17 +280,13 @@ void rcpWaitPeriod(uint32_t period) {
 }
 
 void phyReset(void) {
-	ResetReqFormat_t rst;
 	OsalNvWriteFormat_t req;
-
-	// Clear complete memory of CC2530
 	req.Id = 0x0003;
 	req.Offset = 0x00;
 	req.Len = 0x01;
 	req.Value[0] = 0x03;
 	sysOsalNvWrite(&req);
-
-	// hard reset
+	ResetReqFormat_t rst;
 	rst.Type = 0x00;
 	sysResetReq(&rst);
 }
@@ -439,25 +436,25 @@ uint8_t show(const char *fmt, ...) {
 }
 
 void reset(uint8_t devType) {
-	show("Clear configuration");
-	int32_t status;
-	status = setNVStartup(ZCD_STARTOPT_CLEAR_STATE | ZCD_STARTOPT_CLEAR_CONFIG);
-	if (status != MT_RPC_SUCCESS) {
-		show("Clear configuration failed");
-		return;
-	}
+	OsalNvWriteFormat_t req = { .Id = ZCD_NV_STARTUP_OPTION, .Offset = 0, .Len =
+			1, .Value = { 0x03 } };
+	sysOsalNvWrite(&req);
+	//
+	sysResetReq(&const_hard_rst);
+	//
+	vTaskDelay(4000);
+	//
+	req.Value[0] = 0;
+	sysOsalNvWrite(&req);
+	//
+	OsalNvWriteFormat_t nvWrite = { .Id = ZCD_NV_LOGICAL_TYPE, .Offset = 0,
+			.Len = 1, .Value[0] = devType };
+	sysOsalNvWrite(&nvWrite);
+	//
+	sysResetReq(&const_hard_rst);
+	vTaskDelay(4000);
 	sys_cfg.devType = devType;
 	cfgWrite();
-	phyReset();
-	vTaskDelay(4000);
-	/**/
-	status = setNVStartup(0);
-	if (status != MT_RPC_SUCCESS) {
-		show("Reset failed");
-		return;
-	}
-	phyReset();
-	vTaskDelay(1000);
 }
 
 void resetCoo() {
@@ -474,18 +471,12 @@ void scan() {
 
 void start() {
 	show("Starting");
-	ResetReqFormat_t resReq = { .Type = 1 };
-	sysResetReq(&resReq);
-	rpcWaitMqClientMsg(5000);
-	show("Set device type");
-	OsalNvWriteFormat_t nvWrite = { .Id = ZCD_NV_LOGICAL_TYPE, .Offset = 0,
-			.Len = 1, .Value[0] = sys_cfg.devType };
-	uint8_t status = sysOsalNvWrite(&nvWrite);
-	if (status != MT_RPC_SUCCESS) {
-		show("Set device type failed");
-		return;
-	}
-	status = registerAf();
+	/*
+	 ResetReqFormat_t resReq = { .Type = 1 };
+	 sysResetReq(&resReq);
+	 rpcWaitMqClientMsg(5000);
+	 */
+	uint8_t status = registerAf();
 	if (status != MT_RPC_SUCCESS) {
 		show("Register Af failed");
 		return;
@@ -553,7 +544,6 @@ void vAppTask(void *pvParameters) {
 }
 
 //init ZDO device state
-devStates_t devState = DEV_HOLD;
 uint8_t gSrcEndPoint = 1;
 uint8_t gDstEndPoint = 1;
 
@@ -608,9 +598,7 @@ static uint8_t mtZdoStateChangeIndCb(uint8_t newDevState) {
 		show("mtZdoStateChangeIndCb: Started as device after authentication");
 		break;
 	case DEV_ROUTER:
-		show("Network Joined");
-		show(
-				"mtZdoStateChangeIndCb: Device joined, authenticated and is a router");
+		show("Device joined as Router");
 		break;
 	case DEV_COORD_STARTING:
 		show("Network Starting");
