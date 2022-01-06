@@ -211,11 +211,15 @@ void scan() {
 
 void start() {
 	show("Starting");
+	uint8_t status;
+	/*
 	uint8_t status = registerAf();
 	if (status != MT_RPC_SUCCESS) {
 		show("Register Af failed");
 		return;
 	}
+	*/
+	//sysResetReq(&const_hard_rst);
 	status = zdoInit();
 	if (status == NEW_NETWORK) {
 		show("Start new network");
@@ -329,6 +333,7 @@ static uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t *msg) {
 	MgmtLqiReqFormat_t req;
 
 	if (msg->Status == MT_RPC_SUCCESS) {
+		show("Device: %d", msg->SrcAddr);
 		nodeCount++;
 		nodeList[localNodeCount].NodeAddr = msg->SrcAddr;
 		nodeList[localNodeCount].Type = (
@@ -339,8 +344,8 @@ static uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t *msg) {
 		uint32_t i;
 		for (i = 0; i < msg->NeighborLqiListCount; i++) {
 			devType = msg->NeighborLqiList[i].DevTyp_RxOnWhenIdle_Relat & 3;
-			devRelation = ((msg->NeighborLqiList[i].DevTyp_RxOnWhenIdle_Relat
-					>> 4) & 7);
+			devRelation = ((msg->NeighborLqiList[i].DevTyp_RxOnWhenIdle_Relat >> 4) & 7);
+			show(" Children: %d", msg->NeighborLqiList[i].NetworkAddress);
 			if (devRelation == 1) {
 				uint8_t cCount = nodeList[localNodeCount].ChildCount;
 				nodeList[localNodeCount].childs[cCount].ChildAddr =
