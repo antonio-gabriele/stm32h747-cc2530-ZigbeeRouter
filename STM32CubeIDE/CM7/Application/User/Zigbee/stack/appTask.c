@@ -22,8 +22,7 @@ extern my_Configuration sys_cfg;
 /**/
 extern QueueHandle_t xQueueBackendToView;
 
-#define MAX_CHILDREN 10
-#define MAX_NODE_LIST 10
+#define MAX_NODE_LIST 100
 //
 devStates_t devState = DEV_HOLD;
 ResetReqFormat_t const_hard_rst = { .Type = 0 };
@@ -41,8 +40,6 @@ typedef struct {
 	uint8_t Status;
 	uint16_t NodeAddr;
 	uint8_t Type;
-	uint8_t ChildCount;
-	ChildNode_t childs[MAX_CHILDREN];
 } Node_t;
 
 Node_t nodeList[MAX_NODE_LIST];
@@ -190,13 +187,16 @@ void resetRtr() {
 }
 
 void scan() {
+	memset(nodeList, MAX_NODE_LIST, sizeof(nodeList));
+	nodeCount = 0;
+	nodeList[nodeCount].NodeAddr = 0;
+	nodeList[nodeCount].Status = 0xFF;
+	nodeList[nodeCount].Type = 0;
+	nodeCount++;
 	MgmtLqiReqFormat_t lqiReq = { .DstAddr = 0, .StartIndex = 0 };
-	zdoMgmtLqiReq(&lqiReq);
-	/*
 	struct AppMessage msg = { .ucMessageID = MID_ZB_ZBEE_LQIREQ };
 	memcpy(msg.content, &lqiReq, sizeof(MgmtLqiReqFormat_t));
 	xQueueSend(xQueueViewToBackend, (void* ) &msg, (TickType_t ) 0);
-	*/
 }
 
 void start() {
@@ -322,12 +322,14 @@ static uint8_t mtZdoStateChangeIndCb(uint8_t newDevState) {
 
 static uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t *msg) {
 	if (msg->Status == MT_RPC_SUCCESS) {
+		/*
 		if (msg->StartIndex == 0) {
 			show("Parent: %d, Children: %d", msg->SrcAddr,
 					msg->NeighborTableEntries);
 		}
+		*/
 		if (msg->StartIndex + msg->NeighborLqiListCount
-				<= msg->NeighborTableEntries) {
+				< msg->NeighborTableEntries) {
 			MgmtLqiReqFormat_t lqiReq;
 			lqiReq.DstAddr = msg->SrcAddr;
 			lqiReq.StartIndex = msg->StartIndex + msg->NeighborLqiListCount;
@@ -335,44 +337,38 @@ static uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t *msg) {
 			memcpy(msg.content, &lqiReq, sizeof(MgmtLqiReqFormat_t));
 			xQueueSend(xQueueViewToBackend, (void* ) &msg, (TickType_t ) 0);
 		}
-		/*
-		 uint8_t devType = 0;
-		 uint8_t devRelation = 0;
-		 uint8_t localNodeCount = nodeCount;
-
-		 show("Device: %d, Children: %d, Type: %d", msg->SrcAddr,
-		 msg->NeighborLqiListCount,
-		 (msg->SrcAddr == 0 ? DEVICETYPE_COORDINATOR : DEVICETYPE_ROUTER));
-		 nodeList[nodeCount].Status = nodeList[nodeCount].NodeAddr =
-		 msg->SrcAddr;
-		 nodeList[nodeCount].Type = (
-		 msg->SrcAddr == 0 ? DEVICETYPE_COORDINATOR : DEVICETYPE_ROUTER);
-		 nodeList[localNodeCount].ChildCount = 0;
-		 */
-		uint32_t i;
+		uint32_t i = 0;
+		uint8_t i1 = 0;
+		uint8_t found = 0;
 		for (i = 0; i < msg->NeighborLqiListCount; i++) {
-			show("Index: %d, Found: %d", msg->StartIndex,
-					msg->NeighborLqiList[i].NetworkAddress);
-			/*
-			 devType = msg->NeighborLqiList[i].DevTyp_RxOnWhenIdle_Relat & 3;
-			 devRelation = ((msg->NeighborLqiList[i].DevTyp_RxOnWhenIdle_Relat
-			 >> 4) & 7);
-			 if (devRelation == 1) {
-			 uint8_t cCount = nodeList[localNodeCount].ChildCount;
-			 nodeList[localNodeCount].childs[cCount].ChildAddr =
-			 msg->NeighborLqiList[i].NetworkAddress;
-			 nodeList[localNodeCount].childs[cCount].Type = devType;
-			 nodeList[localNodeCount].ChildCount++;
-			 if (devType == DEVICETYPE_ROUTER) {
-			 MgmtLqiReqFormat_t lqiReq1;
-			 lqiReq1.DstAddr = msg->NeighborLqiList[i].NetworkAddress;
-			 lqiReq1.StartIndex = 0;
-			 struct AppMessage msg = { .ucMessageID = MID_ZB_ZBEE_LQIREQ };
-			 memcpy(msg.content, &lqiReq1, sizeof(MgmtLqiReqFormat_t));
-			 xQueueSend(xQueueViewToBackend, (void* ) &msg, (TickType_t ) 0);
-			 }
-			 }
-			 */
+			for (i1 = 0; i1 < nodeCount; ++i1) {
+				if (nodeList[i1].NodeAddr
+						== msg->NeighborLqiList[i].NetworkAddress) {
+					found = 1;
+					break;
+				}
+			}
+			if (found == 1) {
+				return 0;
+			}
+			show("Count: %d, Found: %d", nodeCount, msg->NeighborLqiList[i].NetworkAddress);
+			uint8_t devType = msg->NeighborLqiList[i].DevTyp_RxOnWhenIdle_Relat & 3;
+			Node_t* node = nodeList[nodeCount];
+			nodeCount++;
+			node->NodeAddr = msg->NeighborLqiList[i].NetworkAddress;
+			node->Status = 0xFF;
+			node->Type = devType;
+			if (devType == DEVICETYPE_ROUTER) {
+				node->Status = 0x00;
+				MgmtLqiReqFormat_t lqiReq1;
+				lqiReq1.DstAddr = msg->NeighborLqiList[i].NetworkAddress;
+				lqiReq1.StartIndex = 0;
+				struct AppMessage msg =
+						{ .ucMessageID = MID_ZB_ZBEE_LQIREQ };
+				memcpy(msg.content, &lqiReq1, sizeof(MgmtLqiReqFormat_t));
+				xQueueSend(xQueueViewToBackend, (void* ) &msg,
+						(TickType_t ) 0);
+			}
 		}
 	}
 	return msg->Status;
