@@ -38,6 +38,7 @@ typedef struct {
 } ChildNode_t;
 
 typedef struct {
+	uint8_t Status;
 	uint16_t NodeAddr;
 	uint8_t Type;
 	uint8_t ChildCount;
@@ -145,22 +146,36 @@ static uint8_t show(const char *fmt, ...) {
 }
 
 void reset(uint8_t devType) {
+	uint8_t status = 0;
 	OsalNvWriteFormat_t req = { .Id = ZCD_NV_STARTUP_OPTION, .Offset = 0, .Len =
 			1, .Value = { 0x03 } };
-	sysOsalNvWrite(&req);
-	//
-	sysResetReq(&const_hard_rst);
-	//
+	status = sysOsalNvWrite(&req);
+	status = sysResetReq(&const_hard_rst);
 	vTaskDelay(4000);
-	//
-	req.Value[0] = 0;
-	sysOsalNvWrite(&req);
-	//
+	/*
+	 if(status != 0){
+	 show("Errore");
+	 }
+	 //
+
+	 //
+	 req.Value[0] = 0;
+	 status = sysOsalNvWrite(&req);
+	 if(status != 0){
+	 show("Errore");
+	 }
+	 */
 	OsalNvWriteFormat_t nvWrite = { .Id = ZCD_NV_LOGICAL_TYPE, .Offset = 0,
 			.Len = 1, .Value[0] = devType };
-	sysOsalNvWrite(&nvWrite);
+	status = sysOsalNvWrite(&nvWrite);
+	if (status != 0) {
+		show("Errore");
+	}
 	//
-	sysResetReq(&const_hard_rst);
+	status = sysResetReq(&const_hard_rst);
+	if (status != 0) {
+		show("Errore");
+	}
 	vTaskDelay(4000);
 	sys_cfg.devType = devType;
 	cfgWrite();
@@ -175,51 +190,22 @@ void resetRtr() {
 }
 
 void scan() {
-	MgmtLqiReqFormat_t req;
-	req.DstAddr = 0;
-	req.StartIndex = 0;
-	uint8_t status;
-	while (1) {
-		nodeCount = 0;
-		zdoMgmtLqiReq(&req);
-		while (status != -1) {
-			status = rpcWaitMqClientMsg(1000);
-		}
-		status = 0;
-		uint8_t i;
-		for (i = 0; i < nodeCount; i++) {
-			char *devtype = (
-					nodeList[i].Type == DEVICETYPE_ROUTER ?
-							"ROUTER" : "END DEVICE");
-			if (nodeList[i].Type == DEVICETYPE_COORDINATOR) {
-				devtype = "COORDINATOR";
-			}
-			show("Node Address: 0x%04X   Type: %s\n", nodeList[i].NodeAddr,
-					devtype);
-
-			show("Children: %d\n", nodeList[i].ChildCount);
-			uint8_t cI;
-			for (cI = 0; cI < nodeList[i].ChildCount; cI++) {
-				uint8_t type = nodeList[i].childs[cI].Type;
-				show("\tAddress: 0x%04X   Type: %s\n",
-						nodeList[i].childs[cI].ChildAddr,
-						(type == DEVICETYPE_ROUTER ? "ROUTER" : "END DEVICE"));
-			}
-		}
-	}
+	MgmtLqiReqFormat_t lqiReq = { .DstAddr = 0, .StartIndex = 0 };
+	zdoMgmtLqiReq(&lqiReq);
+	/*
+	struct AppMessage msg = { .ucMessageID = MID_ZB_ZBEE_LQIREQ };
+	memcpy(msg.content, &lqiReq, sizeof(MgmtLqiReqFormat_t));
+	xQueueSend(xQueueViewToBackend, (void* ) &msg, (TickType_t ) 0);
+	*/
 }
 
 void start() {
 	show("Starting");
-	uint8_t status;
-	/*
 	uint8_t status = registerAf();
 	if (status != MT_RPC_SUCCESS) {
 		show("Register Af failed");
 		return;
 	}
-	*/
-	//sysResetReq(&const_hard_rst);
 	status = zdoInit();
 	if (status == NEW_NETWORK) {
 		show("Start new network");
@@ -251,6 +237,13 @@ void vAppTaskLoop() {
 		case MID_ZB_ZBEE_SCAN:
 			scan();
 			break;
+		case MID_ZB_ZBEE_LQIREQ: {
+			MgmtLqiReqFormat_t lqiReq = { .DstAddr = 0, .StartIndex = 1 };
+			memccpy(&lqiReq, xRxedStructure.content, 1,
+					sizeof(MgmtLqiReqFormat_t));
+			zdoMgmtLqiReq(&lqiReq);
+		}
+			break;
 		}
 	}
 	rpcWaitMqClientMsg(10);
@@ -262,15 +255,16 @@ void vAppTask(void *pvParameters) {
 	sysRegisterCallbacks(mtSysCb);
 	zdoRegisterCallbacks(mtZdoCb);
 	show("System started");
-	znp_if_init();
+	//znp_if_init();
 	znp_if_init();
 	znp_cmd_init();
 	vTaskDelay(1000);
-	uint8_t ret = 0;
+	uint8_t status = 0;
+	status = sysResetReq(&const_hard_rst);
 	do {
 		vTaskDelay(1000);
-		ret = sysVersion();
-	} while (ret != 0);
+		status = sysVersion();
+	} while (status != 0);
 	show("Event loop started");
 	while (1)
 		vAppTaskLoop();
@@ -327,42 +321,60 @@ static uint8_t mtZdoStateChangeIndCb(uint8_t newDevState) {
 }
 
 static uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t *msg) {
-	uint8_t devType = 0;
-	uint8_t devRelation = 0;
-	uint8_t localNodeCount = nodeCount;
-	MgmtLqiReqFormat_t req;
-
 	if (msg->Status == MT_RPC_SUCCESS) {
-		show("Device: %d", msg->SrcAddr);
-		nodeCount++;
-		nodeList[localNodeCount].NodeAddr = msg->SrcAddr;
-		nodeList[localNodeCount].Type = (
-				msg->SrcAddr == 0 ?
-				DEVICETYPE_COORDINATOR :
-									DEVICETYPE_ROUTER);
-		nodeList[localNodeCount].ChildCount = 0;
+		if (msg->StartIndex == 0) {
+			show("Parent: %d, Children: %d", msg->SrcAddr,
+					msg->NeighborTableEntries);
+		}
+		if (msg->StartIndex + msg->NeighborLqiListCount
+				<= msg->NeighborTableEntries) {
+			MgmtLqiReqFormat_t lqiReq;
+			lqiReq.DstAddr = msg->SrcAddr;
+			lqiReq.StartIndex = msg->StartIndex + msg->NeighborLqiListCount;
+			struct AppMessage msg = { .ucMessageID = MID_ZB_ZBEE_LQIREQ };
+			memcpy(msg.content, &lqiReq, sizeof(MgmtLqiReqFormat_t));
+			xQueueSend(xQueueViewToBackend, (void* ) &msg, (TickType_t ) 0);
+		}
+		/*
+		 uint8_t devType = 0;
+		 uint8_t devRelation = 0;
+		 uint8_t localNodeCount = nodeCount;
+
+		 show("Device: %d, Children: %d, Type: %d", msg->SrcAddr,
+		 msg->NeighborLqiListCount,
+		 (msg->SrcAddr == 0 ? DEVICETYPE_COORDINATOR : DEVICETYPE_ROUTER));
+		 nodeList[nodeCount].Status = nodeList[nodeCount].NodeAddr =
+		 msg->SrcAddr;
+		 nodeList[nodeCount].Type = (
+		 msg->SrcAddr == 0 ? DEVICETYPE_COORDINATOR : DEVICETYPE_ROUTER);
+		 nodeList[localNodeCount].ChildCount = 0;
+		 */
 		uint32_t i;
 		for (i = 0; i < msg->NeighborLqiListCount; i++) {
-			devType = msg->NeighborLqiList[i].DevTyp_RxOnWhenIdle_Relat & 3;
-			devRelation = ((msg->NeighborLqiList[i].DevTyp_RxOnWhenIdle_Relat >> 4) & 7);
-			show(" Children: %d", msg->NeighborLqiList[i].NetworkAddress);
-			if (devRelation == 1) {
-				uint8_t cCount = nodeList[localNodeCount].ChildCount;
-				nodeList[localNodeCount].childs[cCount].ChildAddr =
-						msg->NeighborLqiList[i].NetworkAddress;
-				nodeList[localNodeCount].childs[cCount].Type = devType;
-				nodeList[localNodeCount].ChildCount++;
-				if (devType == DEVICETYPE_ROUTER) {
-					req.DstAddr = msg->NeighborLqiList[i].NetworkAddress;
-					req.StartIndex = 0;
-					zdoMgmtLqiReq(&req);
-				}
-			}
+			show("Index: %d, Found: %d", msg->StartIndex,
+					msg->NeighborLqiList[i].NetworkAddress);
+			/*
+			 devType = msg->NeighborLqiList[i].DevTyp_RxOnWhenIdle_Relat & 3;
+			 devRelation = ((msg->NeighborLqiList[i].DevTyp_RxOnWhenIdle_Relat
+			 >> 4) & 7);
+			 if (devRelation == 1) {
+			 uint8_t cCount = nodeList[localNodeCount].ChildCount;
+			 nodeList[localNodeCount].childs[cCount].ChildAddr =
+			 msg->NeighborLqiList[i].NetworkAddress;
+			 nodeList[localNodeCount].childs[cCount].Type = devType;
+			 nodeList[localNodeCount].ChildCount++;
+			 if (devType == DEVICETYPE_ROUTER) {
+			 MgmtLqiReqFormat_t lqiReq1;
+			 lqiReq1.DstAddr = msg->NeighborLqiList[i].NetworkAddress;
+			 lqiReq1.StartIndex = 0;
+			 struct AppMessage msg = { .ucMessageID = MID_ZB_ZBEE_LQIREQ };
+			 memcpy(msg.content, &lqiReq1, sizeof(MgmtLqiReqFormat_t));
+			 xQueueSend(xQueueViewToBackend, (void* ) &msg, (TickType_t ) 0);
+			 }
+			 }
+			 */
 		}
-	} else {
-		//consolePrint("MgmtLqiRsp Status: FAIL 0x%02X", msg->Status);
 	}
-
 	return msg->Status;
 }
 
