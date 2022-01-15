@@ -25,8 +25,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <queue.h>
-#include <appTask.h>
-#include <comTask.h>
+#include <application.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -95,8 +94,6 @@ void TouchGFX_Task(void *argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-QueueHandle_t xQueueViewToBackend;
-QueueHandle_t xQueueBackendToView;
 /* USER CODE END 0 */
 
 /**
@@ -196,8 +193,6 @@ int main(void)
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
-	xQueueViewToBackend = xQueueCreate(4, sizeof(struct AppMessage));
-	xQueueBackendToView = xQueueCreate(4, sizeof(struct AppMessage));
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
@@ -206,8 +201,7 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_THREADS */
 	/* add threads, ... */
-	xTaskCreate(vAppTask, "APP", 1500, NULL, 6, NULL);
-	xTaskCreate(vComTask, "COM", 512, NULL, 5, NULL);
+  app_init();
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */

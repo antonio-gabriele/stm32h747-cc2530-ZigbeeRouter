@@ -1,6 +1,6 @@
 #include <gui/home_screen/HomeView.hpp>
 
-#include <appTask.h>
+#include <application.h>
 #include <FreeRTOS.h>
 #include <queue.h>
 #include <memory.h>

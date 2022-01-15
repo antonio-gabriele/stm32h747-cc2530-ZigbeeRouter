@@ -2,7 +2,7 @@
 #define MODELLISTENER_HPP
 
 #include <gui/model/Model.hpp>
-#include <appTask.h>
+#include <application.h>
 
 class ModelListener
 {

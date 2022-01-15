@@ -6,6 +6,9 @@
 #error Regenerate this file with the current version of nanopb generator.
 #endif
 
+PB_BIND(my_Device, my_Device, AUTO)
+
+
 PB_BIND(my_Configuration, my_Configuration, AUTO)
 
 

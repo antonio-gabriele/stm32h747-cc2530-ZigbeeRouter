@@ -1,8 +1,5 @@
-#include "configuration.h"
+#include "system.h"
 
-#include <pb.h>
-#include <pb_decode.h>
-#include <pb_encode.h>
 #include <stm32h747i_discovery_qspi.h>
 
 #define BUFFER_SIZE         ((uint32_t)0x2000)
@@ -11,24 +8,19 @@
 #define READ_ADDR 			(uint8_t*)(0x90000000 + WRITE_ADDR)
 #define MAGIC_NUMBER 		((uint8_t)0xAA)
 
-my_Configuration sys_cfg = my_Configuration_init_zero;
+Configuration_t sys_cfg = { 0 };
 
 uint8_t reInit() {
 	BSP_QSPI_DeInit(0);
-
 	BSP_QSPI_Init_t init;
 	init.InterfaceMode = MT25TL01G_QPI_MODE;
 	init.TransferRate = MT25TL01G_DTR_TRANSFER;
 	init.DualFlashMode = MT25TL01G_DUALFLASH_ENABLE;
-
 	extern BSP_QSPI_Ctx_t QSPI_Ctx[QSPI_INSTANCES_NUMBER];
-
 	QSPI_Ctx[0].IsInitialized = QSPI_ACCESS_NONE;
-
 	if (BSP_QSPI_Init(0, &init) != BSP_ERROR_NONE) {
 		return CFG_ERR;
 	}
-
 	return CFG_OK;
 }
 
@@ -36,7 +28,6 @@ uint8_t cfgDisableMemoryMappedMode() {
 	if (BSP_QSPI_DisableMemoryMappedMode(0) != BSP_ERROR_NONE) {
 		return CFG_ERR;
 	}
-
 	uint8_t status;
 	status = reInit();
 	return status;
@@ -45,70 +36,43 @@ uint8_t cfgDisableMemoryMappedMode() {
 uint8_t cfgEnableMemoryMappedMode() {
 	uint8_t status;
 	status = reInit();
-
 	if (status != BSP_ERROR_NONE) {
 		return CFG_ERR;
 	}
-
 	if (BSP_QSPI_EnableMemoryMappedMode(0) != BSP_ERROR_NONE) {
 		return CFG_ERR;
 	}
-
 	return CFG_OK;
 }
 
 uint8_t cfgRead() {
-
-	if (*(READ_ADDR ) != MAGIC_NUMBER) {
-		return CFG_ERR;
+	uint8_t *src = (uint8_t*) (READ_ADDR);
+	memcpy(&sys_cfg, src, sizeof(Configuration_t));
+	if(sys_cfg.MagicNumber != MAGIC_NUMBER){
+		memset(&sys_cfg, 0, sizeof(Configuration_t));
+		cfgWrite();
 	}
-
-	uint32_t bytes_written = *(READ_ADDR + 1);
-
-	pb_istream_t stream = pb_istream_from_buffer(READ_ADDR + 5, bytes_written);
-	bool o = pb_decode(&stream, my_Configuration_fields, &sys_cfg);
-
-	if (o == false) {
-		return CFG_ERR;
-	}
-
 	return CFG_OK;
 }
 
 uint8_t cfgWrite() {
-	uint8_t qspi_aTxBuffer[BUFFER_SIZE];
-
-	pb_ostream_t stream = pb_ostream_from_buffer((qspi_aTxBuffer + 5),
-			sizeof(qspi_aTxBuffer) - 5);
-	bool o = pb_encode(&stream, my_Configuration_fields, &sys_cfg);
-
-	if (o == false) {
-		return CFG_ERR;
-	}
-
-	*qspi_aTxBuffer = (uint8_t) (0xAA);
-	*(qspi_aTxBuffer + 1) = stream.bytes_written;
-
+	sys_cfg.MagicNumber = MAGIC_NUMBER;
 	uint8_t status;
 	status = cfgDisableMemoryMappedMode();
 	if (status != BSP_ERROR_NONE) {
 		return CFG_ERR;
 	}
-
 	status = BSP_QSPI_EraseBlock(0, WRITE_ADDR, BSP_QSPI_ERASE_8K);
 	if (status != BSP_ERROR_NONE) {
 		return CFG_ERR;
 	}
-
-	status = BSP_QSPI_Write(0, qspi_aTxBuffer, WRITE_ADDR, BUFFER_SIZE);
+	status = BSP_QSPI_Write(0, &sys_cfg, WRITE_ADDR, sizeof(Configuration_t));
 	if (status != BSP_ERROR_NONE) {
 		return CFG_ERR;
 	}
-
 	status = cfgEnableMemoryMappedMode();
 	if (status != BSP_ERROR_NONE) {
 		return CFG_ERR;
 	}
-
 	return CFG_OK;
 }

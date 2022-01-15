@@ -16,6 +16,8 @@
 #define MID_ZB_ZBEE_SCAN 		0x03
 
 #define MID_ZB_ZBEE_LQIREQ		0x04
+#define MID_ZB_ZBEE_ACTEND		0x05
+#define MID_ZB_ZBEE_SIMDES		0x06
 
 #define MID_VW_LOG				0
 
@@ -28,7 +30,6 @@ struct AppMessage
     };
 };
 
-void vAppTask(void *pvParameters);
-void vMsgTask(void *pvParameters);
+void app_init();
 
 #endif

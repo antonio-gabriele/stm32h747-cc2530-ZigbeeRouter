@@ -1,7 +1,7 @@
 #include <gui/home_screen/HomeView.hpp>
 #include <gui/home_screen/HomePresenter.hpp>
 
-#include <appTask.h>
+#include <application.h>
 #include <FreeRTOS.h>
 #include <queue.h>
 #include <stdio.h>

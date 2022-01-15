@@ -2,7 +2,13 @@ syntax = "proto3";
 
 package my;
 
+message Device
+{
+  uint32 NetworkAddress = 1;;
+}
+
 message Configuration
 {
-  uint32 devType        = 1;
+  uint32 devType = 1;
+  repeated Device Devices = 2;
 }
