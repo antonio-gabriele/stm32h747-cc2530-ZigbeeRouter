@@ -28,6 +28,7 @@ QueueHandle_t xQueueBackendToView;
 //
 #define ENQUEUE(ID, STRUCTNAME, OBJECT) struct AppMessage message = { .ucMessageID = ID }; \
 		memcpy(message.content, &OBJECT, sizeof(STRUCTNAME)); \
+		vTaskDelay(100); \
 		xQueueSend(xQueueViewToBackend, (void* ) &message, (TickType_t ) 0);
 
 #define DEQUEUE(STRUCTNAME, FN) { STRUCTNAME req; \
@@ -215,7 +216,7 @@ static uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t *msg) {
 		if (node1 != NULL) {
 			return msg->Status;
 		}
-		ui_show("Count: %d, Found: %d", sys_cfg.NodesCount, address);
+		//ui_show("Count: %d, Found: %d", sys_cfg.NodesCount, address);
 		uint8_t devType = msg->NeighborLqiList[i].DevTyp_RxOnWhenIdle_Relat & 3;
 		Node_t *node = &sys_cfg.Nodes[sys_cfg.NodesCount];
 		sys_cfg.NodesCount++;
@@ -231,15 +232,16 @@ static uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t *msg) {
 			MgmtLqiReqFormat_t req = { .DstAddr = address, .StartIndex = 0 };
 			ENQUEUE(MID_ZB_ZBEE_LQIREQ, MgmtLqiReqFormat_t, req);
 		}
+		break;
 	}
 	return msg->Status;
 }
 
 static uint8_t mtZdoSimpleDescRspCb(SimpleDescRspFormat_t *msg) {
-	if (msg->Status == MT_RPC_SUCCESS) {
+	if (msg->Status != MT_RPC_SUCCESS) {
 		return msg->Status;
 	}
-	ui_show("0x%04X:0x%02X, In: %d", msg->NwkAddr, msg->Endpoint, msg->NumInClusters);
+	ui_show("0x%04X:%d, In: %d", msg->NwkAddr, msg->Endpoint, msg->NumInClusters);
 	Node_t * node = app_find_node_by_address(msg->NwkAddr);
 	Endpoint_t * endpoint = app_find_endpoint(node, msg->Endpoint);
 	endpoint->InClusterCount = msg->NumInClusters;
@@ -253,20 +255,21 @@ static uint8_t mtZdoSimpleDescRspCb(SimpleDescRspFormat_t *msg) {
 	}
 	return msg->Status;
 }
+
 static uint8_t mtZdoActiveEpRspCb(ActiveEpRspFormat_t *msg) {
-	if (msg->Status == MT_RPC_SUCCESS) {
+	if (msg->Status != MT_RPC_SUCCESS) {
 		return msg->Status;
 	}
 	Node_t *node = app_find_node_by_address(msg->SrcAddr);
 	node->ActiveEndpointCompleted = 0xFF;
 	node->EndpointCount = msg->ActiveEPCount;
-	ui_show("Address: %d, Endpoints: %d", msg->SrcAddr, msg->ActiveEPCount);
+	//ui_show("Address: %d, Endpoints: %d", msg->SrcAddr, msg->ActiveEPCount);
 	uint32_t i;
 	for (i = 0; i < msg->ActiveEPCount; i++) {
 		uint8_t endpoint = msg->ActiveEPList[i];
-		SimpleDescReqFormat_t req = { .DstAddr = msg->NwkAddr, .NwkAddrOfInterest = msg->NwkAddr, .Endpoint = endpoint };
 		node->Endpoints[i].Endpoint = endpoint;
 		node->Endpoints[i].SimpleDescriptorCompleted = 0x00;
+		SimpleDescReqFormat_t req = { .DstAddr = msg->NwkAddr, .NwkAddrOfInterest = msg->NwkAddr, .Endpoint = endpoint };
 		ENQUEUE(MID_ZB_ZBEE_SIMDES, SimpleDescReqFormat_t, req)
 	}
 	return msg->Status;
@@ -277,7 +280,7 @@ static uint8_t mtZdoEndDeviceAnnceIndCb(EndDeviceAnnceIndFormat_t *msg) {
 	ui_show("Joined: 0x%04X", msg->NwkAddr);
 	ActiveEpReqFormat_t req = { .DstAddr = msg->NwkAddr, .NwkAddrOfInterest = msg->NwkAddr };
 	ENQUEUE(MID_ZB_ZBEE_ACTEND, ActiveEpReqFormat_t, req);
-	return 0;
+	return 0x00;
 }
 
 /************************************************************************/
@@ -409,8 +412,8 @@ void vComTask(void *pvParameters) {
 }
 
 void app_init() {
-	xQueueViewToBackend = xQueueCreate(4, sizeof(struct AppMessage));
-	xQueueBackendToView = xQueueCreate(4, sizeof(struct AppMessage));
-	xTaskCreate(vAppTask, "APP", 1500, NULL, 6, NULL);
-	xTaskCreate(vComTask, "COM", 512, NULL, 5, NULL);
+	xQueueViewToBackend = xQueueCreate(32, sizeof(struct AppMessage));
+	xQueueBackendToView = xQueueCreate(8, sizeof(struct AppMessage));
+	xTaskCreate(vAppTask, "APP", 2048, NULL, 6, NULL);
+	xTaskCreate(vComTask, "COM", 1024, NULL, 5, NULL);
 }

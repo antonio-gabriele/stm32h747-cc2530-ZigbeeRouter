@@ -25,7 +25,7 @@ struct AppMessage
 {
     char ucMessageID;
     union {
-    	char content[256];
+    	char content[64];
     	//MgmtLqiReqFormat_t lqiReq;
     };
 };
