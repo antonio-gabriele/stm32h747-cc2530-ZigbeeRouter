@@ -20,11 +20,14 @@
 #include "cmsis_os.h"
 #include "rpc.h"
 #include <queue.h>
+#include <timers.h>
 /**/
 extern Configuration_t sys_cfg;
 /**/
 QueueHandle_t xQueueViewToBackend;
 QueueHandle_t xQueueBackendToView;
+TimerHandle_t xTimer;
+StaticTimer_t xTimerBuffer;
 //
 #define ENQUEUE(ID, STRUCTNAME, OBJECT) struct AppMessage message = { .ucMessageID = ID }; \
 		memcpy(message.content, &OBJECT, sizeof(STRUCTNAME)); \
@@ -201,6 +204,7 @@ static uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t *msg) {
 	if (msg->Status != MT_RPC_SUCCESS) {
 		return msg->Status;
 	}
+	xTimerReset(xTimer, 0);
 	if (msg->StartIndex + msg->NeighborLqiListCount < msg->NeighborTableEntries) {
 		MgmtLqiReqFormat_t req = { .DstAddr = msg->SrcAddr, .StartIndex = msg->StartIndex + msg->NeighborLqiListCount };
 		ENQUEUE(MID_ZB_ZBEE_LQIREQ, MgmtLqiReqFormat_t, req)
@@ -216,7 +220,7 @@ static uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t *msg) {
 		if (node1 != NULL) {
 			return msg->Status;
 		}
-		//ui_show("Count: %d, Found: %d", sys_cfg.NodesCount, address);
+		printf("mtZdoMgmtLqiRspCb -> Found: %04X, Count: %d", address, sys_cfg.NodesCount);
 		uint8_t devType = msg->NeighborLqiList[i].DevTyp_RxOnWhenIdle_Relat & 3;
 		Node_t *node = &sys_cfg.Nodes[sys_cfg.NodesCount];
 		sys_cfg.NodesCount++;
@@ -241,9 +245,10 @@ static uint8_t mtZdoSimpleDescRspCb(SimpleDescRspFormat_t *msg) {
 	if (msg->Status != MT_RPC_SUCCESS) {
 		return msg->Status;
 	}
-	ui_show("0x%04X:%d, In: %d", msg->NwkAddr, msg->Endpoint, msg->NumInClusters);
-	Node_t * node = app_find_node_by_address(msg->NwkAddr);
-	Endpoint_t * endpoint = app_find_endpoint(node, msg->Endpoint);
+	xTimerReset(xTimer, 0);
+	printf("mtZdoSimpleDescRspCb -> %04X:%d, In: %d", msg->NwkAddr, msg->Endpoint, msg->NumInClusters);
+	Node_t *node = app_find_node_by_address(msg->NwkAddr);
+	Endpoint_t *endpoint = app_find_endpoint(node, msg->Endpoint);
 	endpoint->InClusterCount = msg->NumInClusters;
 	endpoint->OutClusterCount = msg->NumOutClusters;
 	uint32_t i;
@@ -260,10 +265,11 @@ static uint8_t mtZdoActiveEpRspCb(ActiveEpRspFormat_t *msg) {
 	if (msg->Status != MT_RPC_SUCCESS) {
 		return msg->Status;
 	}
+	xTimerReset(xTimer, 0);
 	Node_t *node = app_find_node_by_address(msg->SrcAddr);
 	node->ActiveEndpointCompleted = 0xFF;
 	node->EndpointCount = msg->ActiveEPCount;
-	//ui_show("Address: %d, Endpoints: %d", msg->SrcAddr, msg->ActiveEPCount);
+	printf("mtZdoActiveEpRspCb -> Address: %04X, Endpoints: %d", msg->SrcAddr, msg->ActiveEPCount);
 	uint32_t i;
 	for (i = 0; i < msg->ActiveEPCount; i++) {
 		uint8_t endpoint = msg->ActiveEPList[i];
@@ -277,7 +283,7 @@ static uint8_t mtZdoActiveEpRspCb(ActiveEpRspFormat_t *msg) {
 }
 
 static uint8_t mtZdoEndDeviceAnnceIndCb(EndDeviceAnnceIndFormat_t *msg) {
-	ui_show("Joined: 0x%04X", msg->NwkAddr);
+	printf("Joined: 0x%04X", msg->NwkAddr);
 	ActiveEpReqFormat_t req = { .DstAddr = msg->NwkAddr, .NwkAddrOfInterest = msg->NwkAddr };
 	ENQUEUE(MID_ZB_ZBEE_ACTEND, ActiveEpReqFormat_t, req);
 	return 0x00;
@@ -323,6 +329,7 @@ void app_scanner() {
 	sys_cfg.NodesCount = 1;
 	MgmtLqiReqFormat_t req = { .DstAddr = 0, .StartIndex = 0 };
 	ENQUEUE(MID_ZB_ZBEE_LQIREQ, MgmtLqiReqFormat_t, req);
+	xTimerStart(xTimer, 0);
 }
 
 void app_start_stack() {
@@ -402,8 +409,6 @@ void vPollTask(void *pvParameters) {
 }
 
 void vComTask(void *pvParameters) {
-	rpcInitMq();
-	rpcOpen();
 	xTaskCreate(vPollTask, "POLL", 1024, NULL, 5, NULL);
 	while (1) {
 		rpcProcess();
@@ -411,9 +416,22 @@ void vComTask(void *pvParameters) {
 	}
 }
 
+void vTimerCallback(TimerHandle_t xTimer) {
+	uint8_t i0 = 0, i1 = 0;
+	for (i0 = 0; i0 < sys_cfg.NodesCount; ++i0) {
+		if (sys_cfg.Nodes[i0].ActiveEndpointCompleted == 0xFF) {
+			i1++;
+		}
+	}
+	ui_show("Trovati %d, Interrogati: %d", sys_cfg.NodesCount, i1);
+}
+
 void app_init() {
+	rpcInitMq();
+	rpcOpen();
 	xQueueViewToBackend = xQueueCreate(32, sizeof(struct AppMessage));
 	xQueueBackendToView = xQueueCreate(8, sizeof(struct AppMessage));
+	xTimer = xTimerCreateStatic("Timer", pdMS_TO_TICKS(5000), pdFALSE, (void*) 0, vTimerCallback, &xTimerBuffer);
 	xTaskCreate(vAppTask, "APP", 2048, NULL, 6, NULL);
 	xTaskCreate(vComTask, "COM", 1024, NULL, 5, NULL);
 }

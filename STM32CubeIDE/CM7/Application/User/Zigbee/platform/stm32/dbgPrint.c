@@ -94,7 +94,7 @@ void dbg_print(int print_level, const char *fmt, ...) {
 		va_end(args);
 
 		// send data
-		printf(working_buffer);
+		//printf(working_buffer);
 	}
 }
 
