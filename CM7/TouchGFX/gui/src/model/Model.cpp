@@ -8,11 +8,9 @@
 
 extern QueueHandle_t xQueueBackendToView;
 extern QueueHandle_t xQueueViewToBackend;
-extern Screen screen;
 
 Model::Model() :
 		modelListener(0) {
-	screen.print = this->modelListener->print;
 }
 
 void Model::uiToBe(struct AppMessage *message) {
