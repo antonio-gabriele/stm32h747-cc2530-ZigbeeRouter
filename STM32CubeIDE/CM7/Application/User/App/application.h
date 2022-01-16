@@ -1,14 +1,42 @@
-/*
- * app.h
- *
- *  Created on: 11 dic 2021
- *      Author: anton
- */
-
-
-
 #ifndef APPLICATION_USER_CORE_APPTASK_H_
 #define APPLICATION_USER_CORE_APPTASK_H_
+
+#include <stdint.h>
+
+#define MAX_NODES 100
+#define MAX_ENDPS 8
+#define MAX_CLUSR 8
+
+typedef struct {
+	uint16_t Cluster;
+
+} Cluster_t;
+
+typedef struct {
+	uint8_t Endpoint;
+	uint8_t SimpleDescriptorCompleted;
+	uint8_t InClusterCount;
+	Cluster_t InClusters[MAX_CLUSR];
+	uint8_t OutClusterCount;
+	Cluster_t OutClusters[MAX_CLUSR];
+} Endpoint_t;
+
+typedef struct {
+	uint8_t LqiCompleted;
+	uint8_t ActiveEndpointCompleted;
+	uint16_t Address;
+	uint8_t IEEE[8];
+	uint8_t Type;
+	uint8_t EndpointCount;
+	Endpoint_t Endpoints[MAX_ENDPS];
+} Node_t;
+
+typedef struct {
+	uint8_t MagicNumber;
+	uint8_t DeviceType;
+	uint8_t NodesCount;
+	Node_t Nodes[MAX_NODES];
+} Configuration_t;
 
 #define MID_ZB_RESET_COO 		0x00
 #define MID_ZB_RESET_RTR 		0x01
@@ -21,15 +49,26 @@
 
 #define MID_VW_LOG				0
 
+#define ENQUEUE(ID, STRUCTNAME, OBJECT) struct AppMessage message = { .ucMessageID = ID }; \
+		memcpy(message.content, &OBJECT, sizeof(STRUCTNAME)); \
+		vTaskDelay(100); \
+		xQueueSend(xQueueViewToBackend, (void* ) &message, (TickType_t ) 0);
+
+#define DEQUEUE(STRUCTNAME, FN) { STRUCTNAME req; \
+			memccpy(&req, xRxedStructure.content, 1, sizeof(STRUCTNAME)); \
+			FN(&req); }
+
 struct AppMessage
 {
     char ucMessageID;
-    union {
-    	char content[64];
-    	//MgmtLqiReqFormat_t lqiReq;
-    };
+    char content[64];
 };
 
 void app_init();
+Node_t* app_find_node_by_address(uint16_t address);
+Endpoint_t* app_find_endpoint(Node_t *node, uint8_t endpoint);
+void app_reset(uint8_t devType);
+void app_summary();
+uint8_t app_show(const char *fmt, ...);
 
 #endif

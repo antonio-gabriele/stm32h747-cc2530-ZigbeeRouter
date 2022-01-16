@@ -1,6 +1,7 @@
 #include "system.h"
 
 #include <stm32h747i_discovery_qspi.h>
+#include <application.h>
 
 #define BUFFER_SIZE         ((uint32_t)0x2000)
 #define FLASH_ADDR 			((uint32_t)0x0050)
@@ -8,7 +9,7 @@
 #define READ_ADDR 			(uint8_t*)(0x90000000 + WRITE_ADDR)
 #define MAGIC_NUMBER 		((uint8_t)0xAA)
 
-Configuration_t sys_cfg = { 0 };
+extern Configuration_t sys_cfg;
 
 uint8_t reInit() {
 	BSP_QSPI_DeInit(0);

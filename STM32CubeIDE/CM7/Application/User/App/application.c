@@ -23,35 +23,15 @@
 #include <timers.h>
 #include <zigbee.h>
 /**/
-extern Configuration_t sys_cfg;
-/**/
+Configuration_t sys_cfg = { 0 };
 QueueHandle_t xQueueViewToBackend;
 QueueHandle_t xQueueBackendToView;
 TimerHandle_t xTimer;
 StaticTimer_t xTimerBuffer;
-//
-#define ENQUEUE(ID, STRUCTNAME, OBJECT) struct AppMessage message = { .ucMessageID = ID }; \
-		memcpy(message.content, &OBJECT, sizeof(STRUCTNAME)); \
-		vTaskDelay(100); \
-		xQueueSend(xQueueViewToBackend, (void* ) &message, (TickType_t ) 0);
-
-#define DEQUEUE(STRUCTNAME, FN) { STRUCTNAME req; \
-			memccpy(&req, xRxedStructure.content, 1, sizeof(STRUCTNAME)); \
-			FN(&req); }
-
-devStates_t devState = DEV_HOLD;
 ResetReqFormat_t const_hard_rst = { .Type = 0 };
-
-Node_t* app_find_node_by_address(uint16_t address);
-Endpoint_t* app_find_endpoint(Node_t *node, uint8_t endpoint);
-void app_reset(uint8_t devType);
-void app_summary();
-static uint8_t ui_show(const char *fmt, ...);
-extern QueueHandle_t xQueueViewToBackend;
-
-
-
-static uint8_t ui_show(const char *fmt, ...) {
+uint8_t bsum = 0;
+/********************************************************************************/
+uint8_t app_show(const char *fmt, ...) {
 	struct AppMessage msg;
 	msg.ucMessageID = MID_VW_LOG;
 	memset(msg.content, 0, sizeof(msg.content));
@@ -72,25 +52,18 @@ void app_reset(uint8_t devType) {
 	OsalNvWriteFormat_t nvWrite = { .Id = ZCD_NV_LOGICAL_TYPE, .Offset = 0, .Len = 1, .Value[0] = devType };
 	status = sysOsalNvWrite(&nvWrite);
 	if (status != 0) {
-		ui_show("Errore");
+		app_show("Errore");
 	}
 	//
 	status = sysResetReq(&const_hard_rst);
 	if (status != 0) {
-		ui_show("Errore");
+		app_show("Errore");
 	}
 	vTaskDelay(4000);
 	sys_cfg.DeviceType = devType;
 	sys_cfg.NodesCount = 0;
 	cfgWrite();
 }
-
-/////////////////////////////////////////////////
-
-/********************************************************************/
-
-
-/************************************************************************/
 
 void app_summary() {
 	uint8_t b0 = 0, b1 = 0;
@@ -125,7 +98,10 @@ void app_summary() {
 	if (m0 < b0) {
 		xTimerStart(xTimer, 0);
 	}
-	ui_show("D:%d/%d, E: %d/%d", m0, b0, m1, b1);
+	if (bsum < (b0 + b1)) {
+		app_show("D:%d/%d, E: %d/%d", m0, b0, m1, b1);
+	}
+	bsum = b0 + b1;
 }
 
 static int32_t app_register_af(void) {
@@ -178,13 +154,13 @@ void app_start_stack() {
 	}
 	status = zdoInit();
 	if (status == NEW_NETWORK) {
-		ui_show("Start new network");
+		app_show("Start new network");
 		status = MT_RPC_SUCCESS;
 	} else if (status == RESTORED_NETWORK) {
-		ui_show("Restored network");
+		app_show("Restored network");
 		status = MT_RPC_SUCCESS;
 	} else {
-		ui_show("Start failed");
+		app_show("Start failed");
 		status = -1;
 	}
 }
@@ -221,8 +197,7 @@ void vAppTaskLoop() {
 
 void vAppTask(void *pvParameters) {
 	cfgRead();
-	sysRegisterCallbacks(mtSysCb);
-	zdoRegisterCallbacks(mtZdoCb);
+	zb_init();
 	znp_if_init();
 	znp_cmd_init();
 	vTaskDelay(1000);
@@ -232,7 +207,7 @@ void vAppTask(void *pvParameters) {
 		vTaskDelay(1000);
 		status = sysVersion();
 	} while (status != 0);
-	ui_show("System started");
+	app_show("System started");
 	while (1)
 		vAppTaskLoop();
 }

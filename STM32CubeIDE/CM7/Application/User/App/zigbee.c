@@ -1,13 +1,25 @@
+#include "cmsis_os.h"
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
 #include <zigbee.h>
-
-mtSysCb_t mtSysCb = { NULL, NULL, NULL, mtSysResetIndCb, mtSysVersionCb, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
-
+#include <timers.h>
+#include <application.h>
+#include <queue.h>
+#include <system.h>
+/********************************************************************************/
+extern Configuration_t sys_cfg;
+extern TimerHandle_t xTimer;
+extern QueueHandle_t xQueueViewToBackend;
+/********************************************************************************/
+devStates_t zb_device_state = DEV_HOLD;
+mtSysCb_t mtSysCb = { NULL, NULL, NULL, zb_sys_reset, zb_sys_version, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
 mtZdoCb_t mtZdoCb = { NULL,       // MT_ZDO_NWK_ADDR_RSP
 		NULL,      // MT_ZDO_IEEE_ADDR_RSP
 		NULL,      // MT_ZDO_NODE_DESC_RSP
 		NULL,     // MT_ZDO_POWER_DESC_RSP
-		mtZdoSimpleDescRspCb,    // MT_ZDO_SIMPLE_DESC_RSP
-		mtZdoActiveEpRspCb,      // MT_ZDO_ACTIVE_EP_RSP
+		zb_zdo_simple_descriptor,    // MT_ZDO_SIMPLE_DESC_RSP
+		zb_zdo_active_endpoint,      // MT_ZDO_ACTIVE_EP_RSP
 		NULL,     // MT_ZDO_MATCH_DESC_RSP
 		NULL,   // MT_ZDO_COMPLEX_DESC_RSP
 		NULL,      // MT_ZDO_USER_DESC_RSP
@@ -17,14 +29,14 @@ mtZdoCb_t mtZdoCb = { NULL,       // MT_ZDO_NWK_ADDR_RSP
 		NULL,          // MT_ZDO_BIND_RSP
 		NULL,        // MT_ZDO_UNBIND_RSP
 		NULL,   // MT_ZDO_MGMT_NWK_DISC_RSP
-		mtZdoMgmtLqiRspCb,       // MT_ZDO_MGMT_LQI_RSP
+		zb_zdo_mgmt_remote_lqi,       // MT_ZDO_MGMT_LQI_RSP
 		NULL,       // MT_ZDO_MGMT_RTG_RSP
 		NULL,      // MT_ZDO_MGMT_BIND_RSP
 		NULL,     // MT_ZDO_MGMT_LEAVE_RSP
 		NULL,     // MT_ZDO_MGMT_DIRECT_JOIN_RSP
 		NULL,     // MT_ZDO_MGMT_PERMIT_JOIN_RSP
-		mtZdoStateChangeIndCb,   // MT_ZDO_STATE_CHANGE_IND
-		mtZdoEndDeviceAnnceIndCb,   // MT_ZDO_END_DEVICE_ANNCE_IND
+		zb_zdo_state_changed,   // MT_ZDO_STATE_CHANGE_IND
+		zb_zdo_end_device_announce,   // MT_ZDO_END_DEVICE_ANNCE_IND
 		NULL,        // MT_ZDO_SRC_RTG_IND
 		NULL,	 //MT_ZDO_BEACON_NOTIFY_IND
 		NULL,			 //MT_ZDO_JOIN_CNF
@@ -34,65 +46,64 @@ mtZdoCb_t mtZdoCb = { NULL,       // MT_ZDO_NWK_ADDR_RSP
 		NULL,   //MT_ZDO_STATUS_ERROR_RSP
 		NULL,  //MT_ZDO_MATCH_DESC_RSP_SENT
 		NULL, NULL };
-
-uint8_t mtSysResetIndCb(ResetIndFormat_t *msg) {
+/********************************************************************************/
+uint8_t zb_sys_reset(ResetIndFormat_t *msg) {
 	printf("Reset ZNP Version: %d.%d.%d\n", msg->MajorRel, msg->MinorRel, msg->HwRev);
 	return 0;
 }
 
-uint8_t mtSysVersionCb(VersionSrspFormat_t *msg) {
+uint8_t zb_sys_version(VersionSrspFormat_t *msg) {
 	printf("Request ZNP Version: %d.%d.%d\n", msg->MajorRel, msg->MinorRel, msg->Product);
 	return 0;
 }
 
-
-uint8_t mtZdoStateChangeIndCb(uint8_t newDevState) {
+uint8_t zb_zdo_state_changed(uint8_t newDevState) {
 
 	switch (newDevState) {
 	case DEV_HOLD:
-		ui_show("Hold");
+		app_show("Hold");
 		break;
 	case DEV_INIT:
-		ui_show("Init");
+		app_show("Init");
 		break;
 	case DEV_NWK_DISC:
-		ui_show("Network Discovering");
+		app_show("Network Discovering");
 		break;
 	case DEV_NWK_JOINING:
-		ui_show("Network Joining");
+		app_show("Network Joining");
 		break;
 	case DEV_NWK_REJOIN:
-		ui_show("Network Rejoining");
+		app_show("Network Rejoining");
 		break;
 	case DEV_END_DEVICE_UNAUTH:
-		ui_show("Network Authenticating");
+		app_show("Network Authenticating");
 		break;
 	case DEV_END_DEVICE:
-		ui_show("Network Joined as End Device");
+		app_show("Network Joined as End Device");
 		break;
 	case DEV_ROUTER:
-		ui_show("Network Joined as Router");
+		app_show("Network Joined as Router");
 		break;
 	case DEV_COORD_STARTING:
-		ui_show("Network Starting");
+		app_show("Network Starting");
 		break;
 	case DEV_ZB_COORD:
-		ui_show("Network Started");
+		app_show("Network Started");
 		break;
 	case DEV_NWK_ORPHAN:
-		ui_show("Network Orphaned");
+		app_show("Network Orphaned");
 		break;
 	default:
-		ui_show("Unknown state");
+		app_show("Unknown state");
 		break;
 	}
 
-	devState = (devStates_t) newDevState;
+	zb_device_state = (devStates_t) newDevState;
 
 	return SUCCESS;
 }
 
-uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t *msg) {
+uint8_t zb_zdo_mgmt_remote_lqi(MgmtLqiRspFormat_t *msg) {
 	if (msg->Status != MT_RPC_SUCCESS) {
 		return msg->Status;
 	}
@@ -133,7 +144,7 @@ uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t *msg) {
 	return msg->Status;
 }
 
-uint8_t mtZdoSimpleDescRspCb(SimpleDescRspFormat_t *msg) {
+uint8_t zb_zdo_simple_descriptor(SimpleDescRspFormat_t *msg) {
 	if (msg->Status != MT_RPC_SUCCESS) {
 		return msg->Status;
 	}
@@ -154,7 +165,7 @@ uint8_t mtZdoSimpleDescRspCb(SimpleDescRspFormat_t *msg) {
 	return msg->Status;
 }
 
-uint8_t mtZdoActiveEpRspCb(ActiveEpRspFormat_t *msg) {
+uint8_t zb_zdo_active_endpoint(ActiveEpRspFormat_t *msg) {
 	if (msg->Status != MT_RPC_SUCCESS) {
 		return msg->Status;
 	}
@@ -175,9 +186,14 @@ uint8_t mtZdoActiveEpRspCb(ActiveEpRspFormat_t *msg) {
 
 }
 
-uint8_t mtZdoEndDeviceAnnceIndCb(EndDeviceAnnceIndFormat_t *msg) {
+uint8_t zb_zdo_end_device_announce(EndDeviceAnnceIndFormat_t *msg) {
 	printf("Joined: 0x%04X\n", msg->NwkAddr);
 	ActiveEpReqFormat_t req = { .DstAddr = msg->NwkAddr, .NwkAddrOfInterest = msg->NwkAddr };
 	ENQUEUE(MID_ZB_ZBEE_ACTEND, ActiveEpReqFormat_t, req);
 	return 0x00;
+}
+
+void zb_init() {
+	sysRegisterCallbacks(mtSysCb);
+	zdoRegisterCallbacks(mtZdoCb);
 }
