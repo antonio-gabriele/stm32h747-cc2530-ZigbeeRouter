@@ -207,7 +207,7 @@ int32_t rpcWaitMqClientMsg(uint32_t timeout) {
 		mtProcess(rpcFrame, rpcLen);
 	}
 	else {
-		dbg_print(PRINT_LEVEL_INFO, "rpcWaitMqClientMsg: Timed out [%d]\n", rpcLen);
+		//dbg_print(PRINT_LEVEL_INFO, "rpcWaitMqClientMsg: Timed out [%d]\n", rpcLen);
 		return -1;
 	}
 

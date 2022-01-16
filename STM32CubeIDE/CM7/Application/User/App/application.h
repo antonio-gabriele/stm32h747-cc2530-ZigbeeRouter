@@ -21,6 +21,12 @@
 
 #define MID_VW_LOG				0
 
+struct Screen
+{
+	void (*print)(char *);
+	void (*clear)();
+}
+
 struct AppMessage
 {
     char ucMessageID;

@@ -24,7 +24,7 @@
 extern Configuration_t sys_cfg;
 /**/
 QueueHandle_t xQueueViewToBackend;
-QueueHandle_t xQueueBackendToView;
+Screen screen;
 //
 #define ENQUEUE(ID, STRUCTNAME, OBJECT) struct AppMessage message = { .ucMessageID = ID }; \
 		memcpy(message.content, &OBJECT, sizeof(STRUCTNAME)); \
