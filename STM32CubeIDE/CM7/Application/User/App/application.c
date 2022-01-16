@@ -107,12 +107,12 @@ NULL,       // MT_ZDO_NWK_ADDR_RSP
 		NULL, NULL };
 
 static uint8_t mtSysResetIndCb(ResetIndFormat_t *msg) {
-	ui_show("Reset ZNP Version: %d.%d.%d", msg->MajorRel, msg->MinorRel, msg->HwRev);
+	printf("Reset ZNP Version: %d.%d.%d\n", msg->MajorRel, msg->MinorRel, msg->HwRev);
 	return 0;
 }
 
 static uint8_t mtSysVersionCb(VersionSrspFormat_t *msg) {
-	ui_show("Request ZNP Version: %d.%d.%d", msg->MajorRel, msg->MinorRel, msg->Product);
+	printf("Request ZNP Version: %d.%d.%d\n", msg->MajorRel, msg->MinorRel, msg->Product);
 	return 0;
 }
 
@@ -220,7 +220,7 @@ static uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t *msg) {
 		if (node1 != NULL) {
 			return msg->Status;
 		}
-		printf("mtZdoMgmtLqiRspCb -> Found: %04X, Count: %d", address, sys_cfg.NodesCount);
+		printf("mtZdoMgmtLqiRspCb -> Found: %04X, Count: %d\n", address, sys_cfg.NodesCount);
 		uint8_t devType = msg->NeighborLqiList[i].DevTyp_RxOnWhenIdle_Relat & 3;
 		Node_t *node = &sys_cfg.Nodes[sys_cfg.NodesCount];
 		sys_cfg.NodesCount++;
@@ -246,9 +246,10 @@ static uint8_t mtZdoSimpleDescRspCb(SimpleDescRspFormat_t *msg) {
 		return msg->Status;
 	}
 	xTimerReset(xTimer, 0);
-	printf("mtZdoSimpleDescRspCb -> %04X:%d, In: %d", msg->NwkAddr, msg->Endpoint, msg->NumInClusters);
+	printf("mtZdoSimpleDescRspCb -> %04X:%d, In: %d\n", msg->NwkAddr, msg->Endpoint, msg->NumInClusters);
 	Node_t *node = app_find_node_by_address(msg->NwkAddr);
 	Endpoint_t *endpoint = app_find_endpoint(node, msg->Endpoint);
+	endpoint->SimpleDescriptorCompleted = 0xFF;
 	endpoint->InClusterCount = msg->NumInClusters;
 	endpoint->OutClusterCount = msg->NumOutClusters;
 	uint32_t i;
@@ -269,7 +270,7 @@ static uint8_t mtZdoActiveEpRspCb(ActiveEpRspFormat_t *msg) {
 	Node_t *node = app_find_node_by_address(msg->SrcAddr);
 	node->ActiveEndpointCompleted = 0xFF;
 	node->EndpointCount = msg->ActiveEPCount;
-	printf("mtZdoActiveEpRspCb -> Address: %04X, Endpoints: %d", msg->SrcAddr, msg->ActiveEPCount);
+	printf("mtZdoActiveEpRspCb -> Address: %04X, Endpoints: %d\n", msg->SrcAddr, msg->ActiveEPCount);
 	uint32_t i;
 	for (i = 0; i < msg->ActiveEPCount; i++) {
 		uint8_t endpoint = msg->ActiveEPList[i];
@@ -283,7 +284,7 @@ static uint8_t mtZdoActiveEpRspCb(ActiveEpRspFormat_t *msg) {
 }
 
 static uint8_t mtZdoEndDeviceAnnceIndCb(EndDeviceAnnceIndFormat_t *msg) {
-	printf("Joined: 0x%04X", msg->NwkAddr);
+	printf("Joined: 0x%04X\n", msg->NwkAddr);
 	ActiveEpReqFormat_t req = { .DstAddr = msg->NwkAddr, .NwkAddrOfInterest = msg->NwkAddr };
 	ENQUEUE(MID_ZB_ZBEE_ACTEND, ActiveEpReqFormat_t, req);
 	return 0x00;
@@ -333,10 +334,9 @@ void app_scanner() {
 }
 
 void app_start_stack() {
-	ui_show("Starting");
 	uint8_t status = app_register_af();
 	if (status != MT_RPC_SUCCESS) {
-		ui_show("Register Af failed");
+		printf("Register Af failed");
 		return;
 	}
 	status = zdoInit();
@@ -350,7 +350,6 @@ void app_start_stack() {
 		ui_show("Start failed");
 		status = -1;
 	}
-	ui_show("ZigBee state machine running");
 }
 
 void vAppTaskLoop() {
@@ -387,7 +386,6 @@ void vAppTask(void *pvParameters) {
 	cfgRead();
 	sysRegisterCallbacks(mtSysCb);
 	zdoRegisterCallbacks(mtZdoCb);
-	ui_show("System started");
 	znp_if_init();
 	znp_cmd_init();
 	vTaskDelay(1000);
@@ -397,7 +395,7 @@ void vAppTask(void *pvParameters) {
 		vTaskDelay(1000);
 		status = sysVersion();
 	} while (status != 0);
-	ui_show("Event loop started");
+	ui_show("System started");
 	while (1)
 		vAppTaskLoop();
 }
@@ -417,13 +415,39 @@ void vComTask(void *pvParameters) {
 }
 
 void vTimerCallback(TimerHandle_t xTimer) {
+	uint8_t b0 = 0, b1 = 0;
 	uint8_t i0 = 0, i1 = 0;
-	for (i0 = 0; i0 < sys_cfg.NodesCount; ++i0) {
+	uint8_t m0 = 0, m1 = 0;
+	for (i0 = 0; i0 < sys_cfg.NodesCount; i0++) {
+		b0++;
+		if (sys_cfg.Nodes[i0].ActiveEndpointCompleted == 0x00) {
+			ActiveEpReqFormat_t req = { //
+					.DstAddr = sys_cfg.Nodes[i0].Address, //
+					.NwkAddrOfInterest = sys_cfg.Nodes[i0].Address };
+			ENQUEUE(MID_ZB_ZBEE_ACTEND, ActiveEpReqFormat_t, req);
+		}
 		if (sys_cfg.Nodes[i0].ActiveEndpointCompleted == 0xFF) {
-			i1++;
+			m0++;
+			for (i1 = 0; i1 < sys_cfg.Nodes[i0].EndpointCount; i1++) {
+				b1++;
+				if (sys_cfg.Nodes[i0].Endpoints[i1].SimpleDescriptorCompleted == 0x00) {
+					SimpleDescReqFormat_t req = { //
+							.DstAddr = sys_cfg.Nodes[i0].Address, //
+							.NwkAddrOfInterest = sys_cfg.Nodes[i0].Address, //
+							.Endpoint = sys_cfg.Nodes[i0].Endpoints[i1].Endpoint };
+					ENQUEUE(MID_ZB_ZBEE_SIMDES, SimpleDescReqFormat_t, req)
+				}
+				if (sys_cfg.Nodes[i0].Endpoints[i1].SimpleDescriptorCompleted == 0xFF) {
+					m1++;
+				}
+			}
+
 		}
 	}
-	ui_show("Trovati %d, Interrogati: %d", sys_cfg.NodesCount, i1);
+	if(m0 < b0){
+		xTimerStart(xTimer, 0);
+	}
+	ui_show("D:%d/%d, E: %d/%d", m0, b0, m1, b1);
 }
 
 void app_init() {
