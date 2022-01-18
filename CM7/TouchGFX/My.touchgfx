@@ -229,6 +229,21 @@
             "TextRotation": "0",
             "Style": "Style4",
             "Clickable": true
+          },
+          {
+            "Type": "ScrollList",
+            "Name": "deviceScrollList",
+            "X": 230,
+            "Y": 50,
+            "Width": 400,
+            "Height": 380,
+            "ItemTemplateName": "Device",
+            "NumberofItems": 10,
+            "ItemMargin": 4,
+            "Easing": "Back",
+            "EasingOption": "Out",
+            "SwipeAcceleration": 1.0,
+            "DragAcceleration": 1.0
           }
         ],
         "Interactions": [
@@ -247,7 +262,56 @@
         ]
       }
     ],
-    "CustomContainerDefinitions": [],
+    "CustomContainerDefinitions": [
+      {
+        "Name": "Device",
+        "Width": 400,
+        "Height": 38,
+        "Components": [
+          {
+            "Type": "ToggleButton",
+            "Name": "btnOnOff",
+            "Width": 128,
+            "Height": 38,
+            "Pressed": "__designer\\Blue_Togglebars_Toggle_round_large_button_ON.png",
+            "Released": "__designer\\Blue_Togglebars_Toggle_round_large_button_OFF.png",
+            "Style": "Style4"
+          },
+          {
+            "Type": "TextArea",
+            "Name": "btnOnOffCaption",
+            "X": 128,
+            "Y": 6,
+            "Width": 272,
+            "Height": 26,
+            "TextId": "__SingleUse_YNPM",
+            "TextRotation": "0",
+            "Color": {
+              "Red": 255,
+              "Green": 255,
+              "Blue": 255
+            },
+            "Wildcard1": {
+              "UseBuffer": true,
+              "BufferSize": 10
+            }
+          }
+        ],
+        "Interactions": [
+          {
+            "InteractionName": "btnOnOffClick",
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "btnOnOff"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "btnOnOffClick"
+            }
+          }
+        ]
+      }
+    ],
     "Name": "My",
     "Resolution": {
       "Width": 800,

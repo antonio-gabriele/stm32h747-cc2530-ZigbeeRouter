@@ -15,7 +15,7 @@ ControllerPresenter::ControllerPresenter(ControllerView& v)
 
 void ControllerPresenter::activate()
 {
-
+	//this->view.devices();
 }
 
 void ControllerPresenter::deactivate()
