@@ -5,6 +5,7 @@
 #include <queue.h>
 
 extern QueueHandle_t xQueueBackendToView;
+extern QueueHandle_t xQueueViewToBackend;
 
 ControllerPresenter::ControllerPresenter(ControllerView& v)
     : view(v)
@@ -33,13 +34,7 @@ void ControllerPresenter::tick() {
 	}
 
 }
-void ControllerPresenter::beToUi(struct AppMessage *message) {
-	switch (message->ucMessageID) {
-	case MID_VW_LOG:
-		break;
-	}
-}
 
 void ControllerPresenter::uiToBe(struct AppMessage *message) {
-	this->model->uiToBe(message);
+	xQueueSend(xQueueViewToBackend, (void* ) message, (TickType_t ) 0);
 }

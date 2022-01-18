@@ -7,8 +7,10 @@
 #include <stdio.h>
 #include <FreeRTOS.h>
 #include <queue.h>
+#include <stdio.h>
 
 extern QueueHandle_t xQueueBackendToView;
+extern QueueHandle_t xQueueViewToBackend;
 
 HomePresenter::HomePresenter(HomeView &v) :
 		view(v) {
@@ -23,14 +25,10 @@ void HomePresenter::tick() {
 			break;
 		}
 	}
-
-}
-
-void HomePresenter::beToUi(struct AppMessage *message) {
 }
 
 void HomePresenter::uiToBe(struct AppMessage *message) {
-	this->model->uiToBe(message);
+	xQueueSend(xQueueViewToBackend, (void* ) message, (TickType_t ) 0);
 }
 
 void HomePresenter::activate() {

@@ -13,7 +13,6 @@ public:
         modelListener = listener;
     }
     void tick();
-    virtual void uiToBe(struct AppMessage * message);
 protected:
     ModelListener* modelListener;
 };
