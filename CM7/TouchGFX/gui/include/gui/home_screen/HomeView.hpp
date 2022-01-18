@@ -16,7 +16,6 @@ public:
     virtual void btnResetRtrClick();
     virtual void btnResetCooClick();
     virtual void displayMessage(char *);
-
 protected:
 };
 

@@ -16,6 +16,7 @@ public:
         model = m;
     }
     virtual void beToUi(struct AppMessage * message);
+    virtual void tick();
 protected:
     Model* model;
 };

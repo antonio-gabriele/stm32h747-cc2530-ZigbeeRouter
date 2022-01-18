@@ -1,17 +1,17 @@
-#ifndef HOMEPRESENTER_HPP
-#define HOMEPRESENTER_HPP
+#ifndef CONTROLLERPRESENTER_HPP
+#define CONTROLLERPRESENTER_HPP
 
 #include <gui/model/ModelListener.hpp>
 #include <mvp/Presenter.hpp>
 
 using namespace touchgfx;
 
-class HomeView;
+class ControllerView;
 
-class HomePresenter : public touchgfx::Presenter, public ModelListener
+class ControllerPresenter : public touchgfx::Presenter, public ModelListener
 {
 public:
-    HomePresenter(HomeView& v);
+    ControllerPresenter(ControllerView& v);
 
     /**
      * The activate function is called automatically when this screen is "switched in"
@@ -24,15 +24,17 @@ public:
      * (ie. made inactive). Teardown functionality can be placed here.
      */
     virtual void deactivate();
+
     virtual void beToUi(struct AppMessage *message);
     virtual void uiToBe(struct AppMessage *message);
     virtual void tick();
-    virtual ~HomePresenter() {};
+
+    virtual ~ControllerPresenter() {};
 
 private:
-    HomePresenter();
+    ControllerPresenter();
 
-    HomeView& view;
+    ControllerView& view;
 };
 
-#endif // HOMEPRESENTER_HPP
+#endif // CONTROLLERPRESENTER_HPP

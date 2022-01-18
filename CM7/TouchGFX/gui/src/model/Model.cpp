@@ -6,7 +6,6 @@
 #include <queue.h>
 #include <stdio.h>
 
-extern QueueHandle_t xQueueBackendToView;
 extern QueueHandle_t xQueueViewToBackend;
 
 Model::Model() :
@@ -18,10 +17,12 @@ void Model::uiToBe(struct AppMessage *message) {
 }
 
 void Model::tick() {
+	this->modelListener->tick();
+	/*
 	struct AppMessage xRxedStructure;
 	if (xQueueReceive(xQueueBackendToView, (struct AppMessage*) &xRxedStructure,
 			(TickType_t) 10) == pdPASS) {
 		this->modelListener->beToUi(&xRxedStructure);
 	}
-
+	*/
 }

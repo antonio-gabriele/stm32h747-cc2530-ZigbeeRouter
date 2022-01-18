@@ -16,6 +16,12 @@
     <Text Id="__SingleUse_CJB7" TypographyId="Default" Alignment="Center" Direction="LTR">
       <Translation Language="GB">Scan</Translation>
     </Text>
+    <Text Id="__SingleUse_LL8U" TypographyId="Default" Alignment="Center" Direction="LTR">
+      <Translation Language="GB">Switch</Translation>
+    </Text>
+    <Text Id="__SingleUse_KX0N" TypographyId="Default" Alignment="Center" Direction="LTR">
+      <Translation Language="GB">Switch</Translation>
+    </Text>
   </Texts>
   <Typographies>
     <Typography Id="Default" Font="verdana.ttf" Size="20" Bpp="4" FallbackCharacter="?" WildcardCharacterRanges="0x20-0x7E" />

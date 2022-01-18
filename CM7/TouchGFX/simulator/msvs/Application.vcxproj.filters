@@ -190,6 +190,18 @@
     <Filter Include="Source Files\generated\gui_generated\containers">
       <UniqueIdentifier>845E8AF1-3656-B820-C352-E91A5EEFBAB1</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\gui\controller_screen">
+      <UniqueIdentifier>D905DED0-686C-EF6C-A5A3-4EBAB5893791</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\gui\controller_screen">
+      <UniqueIdentifier>610DDB9A-6199-46F8-03A1-E369ED59942D</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\generated\gui_generated\controller_screen">
+      <UniqueIdentifier>BD476648-E577-8DBE-3263-1C15B5A35FDE</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\generated\gui_generated\controller_screen">
+      <UniqueIdentifier>536C2BE7-B3CB-BB78-A995-60534DE91184</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(TouchGFXReleasePath)\framework\source\platform\driver\touch\SDL2TouchController.cpp">
@@ -230,6 +242,15 @@
     </ClCompile>
     <ClCompile Include="..\..\generated\gui_generated\src\home_screen\HomeViewBase.cpp">
       <Filter>Source Files\generated\gui_generated\home_screen</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gui\src\controller_screen\ControllerPresenter.cpp">
+      <Filter>Source Files\gui\controller_screen</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gui\src\controller_screen\ControllerView.cpp">
+      <Filter>Source Files\gui\controller_screen</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\generated\gui_generated\src\controller_screen\ControllerViewBase.cpp">
+      <Filter>Source Files\generated\gui_generated\controller_screen</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -681,6 +702,15 @@
     </ClInclude>
     <ClInclude Include="..\..\generated\gui_generated\include\gui_generated\home_screen\HomeViewBase.hpp">
       <Filter>Header Files\generated\gui_generated\home_screen</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gui\include\gui\controller_screen\ControllerPresenter.hpp">
+      <Filter>Header Files\gui\controller_screen</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gui\include\gui\controller_screen\ControllerView.hpp">
+      <Filter>Header Files\gui\controller_screen</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\generated\gui_generated\include\gui_generated\controller_screen\ControllerViewBase.hpp">
+      <Filter>Header Files\generated\gui_generated\controller_screen</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

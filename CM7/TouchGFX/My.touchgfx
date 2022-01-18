@@ -118,6 +118,30 @@
             "TextRotation": "0",
             "Style": "Style4",
             "Clickable": true
+          },
+          {
+            "Type": "ButtonWithLabel",
+            "Name": "btnSwitch",
+            "X": 45,
+            "Y": 370,
+            "Width": 170,
+            "Height": 60,
+            "Pressed": "__designer\\Blue_Buttons_Round_Edge_small_pressed.png",
+            "Released": "__designer\\Blue_Buttons_Round_Edge_small.png",
+            "TextId": "__SingleUse_LL8U",
+            "ReleasedColor": {
+              "Red": 255,
+              "Green": 255,
+              "Blue": 255
+            },
+            "PressedColor": {
+              "Red": 255,
+              "Green": 255,
+              "Blue": 255
+            },
+            "TextRotation": "0",
+            "Style": "Style4",
+            "Clickable": true
           }
         ],
         "Interactions": [
@@ -163,6 +187,61 @@
             "Action": {
               "Type": "ActionCustom",
               "FunctionName": "btnScanClick"
+            }
+          },
+          {
+            "InteractionName": "btnSwitchClick",
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "btnSwitch"
+            },
+            "Action": {
+              "Type": "ActionGotoScreen",
+              "ScreenTransitionType": "ScreenTransitionNone",
+              "ActionComponent": "Controller"
+            }
+          }
+        ]
+      },
+      {
+        "Name": "Controller",
+        "Components": [
+          {
+            "Type": "ButtonWithLabel",
+            "Name": "btnSwitch",
+            "X": 45,
+            "Y": 370,
+            "Width": 170,
+            "Height": 60,
+            "Pressed": "__designer\\Blue_Buttons_Round_Edge_small_pressed.png",
+            "Released": "__designer\\Blue_Buttons_Round_Edge_small.png",
+            "TextId": "__SingleUse_KX0N",
+            "ReleasedColor": {
+              "Red": 255,
+              "Green": 255,
+              "Blue": 255
+            },
+            "PressedColor": {
+              "Red": 255,
+              "Green": 255,
+              "Blue": 255
+            },
+            "TextRotation": "0",
+            "Style": "Style4",
+            "Clickable": true
+          }
+        ],
+        "Interactions": [
+          {
+            "InteractionName": "btnSwitchClick",
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "btnSwitch"
+            },
+            "Action": {
+              "Type": "ActionGotoScreen",
+              "ScreenTransitionType": "ScreenTransitionNone",
+              "ActionComponent": "Home"
             }
           }
         ]

@@ -1,8 +1,6 @@
 #include <gui/home_screen/HomeView.hpp>
 
 #include <application.h>
-#include <FreeRTOS.h>
-#include <queue.h>
 #include <memory.h>
 
 HomeView::HomeView() {
