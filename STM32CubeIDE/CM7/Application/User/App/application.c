@@ -141,8 +141,7 @@ void app_scanner() {
 	coo->LqiCompleted = 0x00;
 	coo->Type = 0;
 	sys_cfg.NodesCount = 1;
-	MgmtLqiReqFormat_t req = { .DstAddr = 0, .StartIndex = 0 };
-	ENQUEUE(MID_ZB_ZBEE_LQIREQ, MgmtLqiReqFormat_t, req);
+	zb_zdo_explore(coo);
 	xTimerStart(xTimer, 0);
 }
 
@@ -190,13 +189,15 @@ void vAppTaskLoop() {
 		case MID_ZB_ZBEE_SIMDES:
 			DEQUEUE(SimpleDescReqFormat_t, zdoSimpleDescReq)
 			break;
+		case MID_ZB_ZBEE_DATARQ:
+			DEQUEUE(DataRequestFormat_t, afDataRequest)
 		}
 	}
 	rpcWaitMqClientMsg(10);
 }
 
 void vAppTask(void *pvParameters) {
-	cfgRead();
+	//cfgRead();
 	zb_init();
 	znp_if_init();
 	znp_cmd_init();
@@ -232,7 +233,7 @@ void vTimerCallback(TimerHandle_t xTimer) {
 void app_init() {
 	rpcInitMq();
 	rpcOpen();
-	xQueueViewToBackend = xQueueCreate(32, sizeof(struct AppMessage));
+	xQueueViewToBackend = xQueueCreate(16, sizeof(struct AppMessage));
 	xQueueBackendToView = xQueueCreate(8, sizeof(struct AppMessage));
 	xTimer = xTimerCreateStatic("Timer", pdMS_TO_TICKS(5000), pdFALSE, (void*) 0, vTimerCallback, &xTimerBuffer);
 	xTaskCreate(vAppTask, "APP", 2048, NULL, 6, NULL);

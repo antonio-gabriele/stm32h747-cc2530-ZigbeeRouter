@@ -7,6 +7,7 @@
 #include <application.h>
 #include <queue.h>
 #include <system.h>
+#include <mtAf.h>
 /********************************************************************************/
 extern Configuration_t sys_cfg;
 extern TimerHandle_t xTimer;
@@ -103,6 +104,29 @@ uint8_t zb_zdo_state_changed(uint8_t newDevState) {
 	return SUCCESS;
 }
 
+uint8_t zb_zdo_explore(Node_t *node) {
+	{
+		ActiveEpReqFormat_t req = { .DstAddr = node->Address, .NwkAddrOfInterest = node->Address };
+		ENQUEUE(MID_ZB_ZBEE_ACTEND, ActiveEpReqFormat_t, req);
+	}
+	{
+		DataRequestFormat_t req = { .ClusterID = 0, .DstAddr = node->Address, .DstEndpoint = 1, .SrcEndpoint = 1, .Len = 7, .Options = 0, .Radius = 0, .TransID = 1 };
+		req.Data[0] = 0; //ZCL->1
+		req.Data[1] = 1;
+		req.Data[2] = 0; //CmdId
+		req.Data[3] = 0x05;
+		req.Data[4] = 0x00;
+		req.Data[5] = 0x04;
+		req.Data[6] = 0x00;
+		ENQUEUE(MID_ZB_ZBEE_DATARQ, DataRequestFormat_t, req);
+	}
+	if (node->Type == DEVICETYPE_ROUTER || node->Type == DEVICETYPE_COORDINATOR) {
+		MgmtLqiReqFormat_t req = { .DstAddr = node->Address, .StartIndex = 0 };
+		ENQUEUE(MID_ZB_ZBEE_LQIREQ, MgmtLqiReqFormat_t, req);
+	}
+	return 0;
+}
+
 uint8_t zb_zdo_mgmt_remote_lqi(MgmtLqiRspFormat_t *msg) {
 	if (msg->Status != MT_RPC_SUCCESS) {
 		return msg->Status;
@@ -131,14 +155,7 @@ uint8_t zb_zdo_mgmt_remote_lqi(MgmtLqiRspFormat_t *msg) {
 		node->ActiveEndpointCompleted = 0x00;
 		node->Address = address;
 		node->Type = devType;
-		{
-			ActiveEpReqFormat_t req = { .DstAddr = address, .NwkAddrOfInterest = address };
-			ENQUEUE(MID_ZB_ZBEE_ACTEND, ActiveEpReqFormat_t, req);
-		}
-		if (devType == DEVICETYPE_ROUTER) {
-			MgmtLqiReqFormat_t req = { .DstAddr = address, .StartIndex = 0 };
-			ENQUEUE(MID_ZB_ZBEE_LQIREQ, MgmtLqiReqFormat_t, req);
-		}
+		zb_zdo_explore(node);
 		break;
 	}
 	return msg->Status;

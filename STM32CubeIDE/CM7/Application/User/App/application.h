@@ -46,6 +46,7 @@ typedef struct {
 #define MID_ZB_ZBEE_LQIREQ		0x04
 #define MID_ZB_ZBEE_ACTEND		0x05
 #define MID_ZB_ZBEE_SIMDES		0x06
+#define MID_ZB_ZBEE_DATARQ		0x07
 
 #define MID_VW_LOG				0
 
@@ -55,13 +56,13 @@ typedef struct {
 		xQueueSend(xQueueViewToBackend, (void* ) &message, (TickType_t ) 0);
 
 #define DEQUEUE(STRUCTNAME, FN) { STRUCTNAME req; \
-			memccpy(&req, xRxedStructure.content, 1, sizeof(STRUCTNAME)); \
+			memcpy(&req, xRxedStructure.content, sizeof(STRUCTNAME)); \
 			FN(&req); }
 
 struct AppMessage
 {
     char ucMessageID;
-    char content[64];
+    char content[140];
 };
 
 void app_init();
