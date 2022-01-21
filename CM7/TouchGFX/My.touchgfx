@@ -239,7 +239,6 @@
             "Height": 380,
             "ItemTemplateName": "Device",
             "NumberofItems": 10,
-            "ItemMargin": 4,
             "Easing": "Back",
             "EasingOption": "Out",
             "SwipeAcceleration": 1.0,
@@ -265,12 +264,27 @@
     "CustomContainerDefinitions": [
       {
         "Name": "Device",
-        "Width": 400,
-        "Height": 38,
+        "Width": 520,
+        "Height": 58,
         "Components": [
+          {
+            "Type": "BoxWithBorder",
+            "Name": "boxWithBorder",
+            "Y": 2,
+            "Width": 520,
+            "Height": 56,
+            "Color": {
+              "Red": 255,
+              "Green": 255,
+              "Blue": 255
+            },
+            "BorderSize": 5
+          },
           {
             "Type": "ToggleButton",
             "Name": "btnOnOff",
+            "X": 7,
+            "Y": 11,
             "Width": 128,
             "Height": 38,
             "Pressed": "__designer\\Blue_Togglebars_Toggle_round_large_button_ON.png",
@@ -280,20 +294,15 @@
           {
             "Type": "TextArea",
             "Name": "btnOnOffCaption",
-            "X": 128,
-            "Y": 6,
-            "Width": 272,
-            "Height": 26,
-            "TextId": "__SingleUse_YNPM",
+            "X": 138,
+            "Y": 18,
+            "Width": 370,
+            "Height": 24,
+            "TextId": "__SingleUse_SBL7",
             "TextRotation": "0",
-            "Color": {
-              "Red": 255,
-              "Green": 255,
-              "Blue": 255
-            },
             "Wildcard1": {
               "UseBuffer": true,
-              "BufferSize": 10
+              "BufferSize": 16
             }
           }
         ],

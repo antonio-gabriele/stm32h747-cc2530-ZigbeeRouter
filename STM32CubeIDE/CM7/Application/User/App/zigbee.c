@@ -14,6 +14,14 @@ extern TimerHandle_t xTimer;
 extern QueueHandle_t xQueueViewToBackend;
 /********************************************************************************/
 devStates_t zb_device_state = DEV_HOLD;
+mtAfCb_t mtAfCb = { .pfnAfDataConfirm = NULL, //
+		.pfnAfDataReqeuestSrsp = NULL, //
+		.pfnAfDataRetrieveSrsp = NULL, //
+		.pfnAfIncomingMsg = zb_af_incoming_msg, //
+		.pfnAfIncomingMsgExt = NULL, //
+		.pfnAfReflectError = NULL, //
+		.pfnAfRegisterSrsp = NULL //
+		};
 mtSysCb_t mtSysCb = { NULL, NULL, NULL, zb_sys_reset, zb_sys_version, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
 mtZdoCb_t mtZdoCb = { NULL,       // MT_ZDO_NWK_ADDR_RSP
 		NULL,      // MT_ZDO_IEEE_ADDR_RSP
@@ -105,24 +113,29 @@ uint8_t zb_zdo_state_changed(uint8_t newDevState) {
 }
 
 uint8_t zb_zdo_explore(Node_t *node) {
-	{
+	if (node->ActiveEndpointCompleted == 0x00) {
 		ActiveEpReqFormat_t req = { .DstAddr = node->Address, .NwkAddrOfInterest = node->Address };
 		ENQUEUE(MID_ZB_ZBEE_ACTEND, ActiveEpReqFormat_t, req);
 	}
-	{
+	if (node->ManufacturerName[0] == 0x00 || node->ModelIdentifier[0] == 0x00) {
 		DataRequestFormat_t req = { .ClusterID = 0, .DstAddr = node->Address, .DstEndpoint = 1, .SrcEndpoint = 1, .Len = 7, .Options = 0, .Radius = 0, .TransID = 1 };
 		req.Data[0] = 0; //ZCL->1
-		req.Data[1] = 1;
+		req.Data[1] = 0xFF;
 		req.Data[2] = 0; //CmdId
 		req.Data[3] = 0x05;
 		req.Data[4] = 0x00;
 		req.Data[5] = 0x04;
 		req.Data[6] = 0x00;
 		ENQUEUE(MID_ZB_ZBEE_DATARQ, DataRequestFormat_t, req);
+
 	}
-	if (node->Type == DEVICETYPE_ROUTER || node->Type == DEVICETYPE_COORDINATOR) {
-		MgmtLqiReqFormat_t req = { .DstAddr = node->Address, .StartIndex = 0 };
-		ENQUEUE(MID_ZB_ZBEE_LQIREQ, MgmtLqiReqFormat_t, req);
+	if (node->LqiCompleted == 0x00) {
+		if (node->Type == DEVICETYPE_ROUTER || node->Type == DEVICETYPE_COORDINATOR) {
+			MgmtLqiReqFormat_t req = { .DstAddr = node->Address, .StartIndex = 0 };
+			ENQUEUE(MID_ZB_ZBEE_LQIREQ, MgmtLqiReqFormat_t, req);
+		} else {
+			node->LqiCompleted = 0xFF;
+		}
 	}
 	return 0;
 }
@@ -203,6 +216,34 @@ uint8_t zb_zdo_active_endpoint(ActiveEpRspFormat_t *msg) {
 
 }
 
+uint8_t zb_af_incoming_msg(IncomingMsgFormat_t *msg) {
+	if (msg->ClusterId == 0 && msg->Len > 1 && msg->Data[1] == 0xFF) {
+		Node_t *node = app_find_node_by_address(msg->SrcAddr);
+		uint8_t j = 3;
+		while (j + 2 < msg->Len) {
+			uint16_t currentAttributeId = msg->Data[j++];
+			currentAttributeId |= msg->Data[j++] << 8;
+			uint8_t success = msg->Data[j++];
+			if (success == 0) {
+				uint8_t zigbeeType = msg->Data[j++];
+				if (zigbeeType == 66) {
+					uint8_t strlen = msg->Data[j++];
+					uint8_t *str = &(msg->Data[j]);
+					if (currentAttributeId == 5) {
+						memcpy(node->ModelIdentifier, str, strlen);
+					} else {
+						memcpy(node->ManufacturerName, str, strlen);
+					}
+					j += strlen;
+				}
+			}
+		}
+		xTimerReset(xTimer, 0);
+
+	}
+	return MT_RPC_SUCCESS;
+}
+
 uint8_t zb_zdo_end_device_announce(EndDeviceAnnceIndFormat_t *msg) {
 	printf("Joined: 0x%04X\n", msg->NwkAddr);
 	ActiveEpReqFormat_t req = { .DstAddr = msg->NwkAddr, .NwkAddrOfInterest = msg->NwkAddr };
@@ -213,4 +254,5 @@ uint8_t zb_zdo_end_device_announce(EndDeviceAnnceIndFormat_t *msg) {
 void zb_init() {
 	sysRegisterCallbacks(mtSysCb);
 	zdoRegisterCallbacks(mtZdoCb);
+	afRegisterCallbacks(mtAfCb);
 }

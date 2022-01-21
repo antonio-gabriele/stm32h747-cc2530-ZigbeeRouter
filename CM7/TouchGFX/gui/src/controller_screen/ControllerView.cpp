@@ -7,14 +7,12 @@ ControllerView::ControllerView() {
 }
 
 void ControllerView::deviceScrollListUpdateItem(Device &item, int16_t itemIndex) {
-	item.setCaption("Ciao");
-}
-
-void ControllerView::devices() {
-	this->deviceScrollList.setNumberOfItems(sys_cfg.NodesCount);
+	Node_t *node = &sys_cfg.Nodes[itemIndex];
+	item.bind(node);
 }
 
 void ControllerView::setupScreen() {
+	this->deviceScrollList.setNumberOfItems(sys_cfg.NodesCount);
 	ControllerViewBase::setupScreen();
 }
 

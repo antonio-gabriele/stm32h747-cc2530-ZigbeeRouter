@@ -22,7 +22,7 @@
     <Text Id="__SingleUse_KX0N" TypographyId="Default" Alignment="Center" Direction="LTR">
       <Translation Language="GB">Switch</Translation>
     </Text>
-    <Text Id="__SingleUse_YNPM" TypographyId="Default" Alignment="Left" Direction="LTR">
+    <Text Id="__SingleUse_SBL7" TypographyId="Default" Alignment="Left" Direction="LTR">
       <Translation Language="GB">&lt;value&gt;</Translation>
     </Text>
   </Texts>

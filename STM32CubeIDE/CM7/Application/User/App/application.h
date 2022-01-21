@@ -28,6 +28,8 @@ typedef struct {
 	uint8_t IEEE[8];
 	uint8_t Type;
 	uint8_t EndpointCount;
+	uint8_t ManufacturerName[32];
+	uint8_t ModelIdentifier[32];
 	Endpoint_t Endpoints[MAX_ENDPS];
 } Node_t;
 
@@ -52,7 +54,6 @@ typedef struct {
 
 #define ENQUEUE(ID, STRUCTNAME, OBJECT) struct AppMessage message = { .ucMessageID = ID }; \
 		memcpy(message.content, &OBJECT, sizeof(STRUCTNAME)); \
-		vTaskDelay(100); \
 		xQueueSend(xQueueViewToBackend, (void* ) &message, (TickType_t ) 0);
 
 #define DEQUEUE(STRUCTNAME, FN) { STRUCTNAME req; \
