@@ -197,7 +197,7 @@ void vAppTaskLoop() {
 }
 
 void vAppTask(void *pvParameters) {
-	//cfgRead();
+	cfgRead();
 	zb_init();
 	znp_if_init();
 	znp_cmd_init();
