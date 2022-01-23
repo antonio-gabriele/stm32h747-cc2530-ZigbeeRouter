@@ -66,36 +66,17 @@ void app_reset(uint8_t devType) {
 }
 
 void app_summary() {
-	uint8_t iNode = 0, iEndpoint = 0;
-	uint8_t nNodes = 0, nNodesAEOk = 0;
-	uint8_t nEndpoints = 0, nEndpointsSDOk = 0;
-	for (iNode = 0; iNode < sys_cfg.NodesCount; iNode++) {
-		nNodes++;
-		Node_t *node = &sys_cfg.Nodes[iNode];
-		if (node->ActiveEndpointCompleted > 0) {
-			ActiveEpReqFormat_t req = { .DstAddr = node->Address, .NwkAddrOfInterest = node->Address };
-			ENQUEUE(MID_ZB_ZBEE_ACTEND, ActiveEpReqFormat_t, req);
-		} else {
-			nNodesAEOk++;
-			for (iEndpoint = 0; iEndpoint < node->EndpointCount; iEndpoint++) {
-				nEndpoints++;
-				Endpoint_t *endpoint = &node->Endpoints[iEndpoint];
-				if (endpoint->SimpleDescriptorCompleted > 0) {
-					SimpleDescReqFormat_t req = { .DstAddr = node->Address, .NwkAddrOfInterest = node->Address, .Endpoint = endpoint->Endpoint };
-					ENQUEUE(MID_ZB_ZBEE_SIMDES, SimpleDescReqFormat_t, req)
-				} else {
-					nEndpointsSDOk++;
-				}
-			}
-		}
-	}
-	if (nNodesAEOk < nNodes || nEndpointsSDOk < nEndpoints) {
+	Summary_t summary = { 0 };
+	zb_zdo_explore1(&summary);
+	if (summary.nNodesAEOk < summary.nNodes || summary.nEndpointsSDOk < summary.nEndpoints) {
 		xTimerStart(xTimer, 0);
 	}
-	if (bsum < (nEndpointsSDOk + nNodesAEOk)) {
-		app_show("D:%d/%d, E: %d/%d", nNodesAEOk, nNodes, nEndpointsSDOk, nEndpoints);
+	if (bsum < (summary.nEndpointsSDOk + summary.nNodesAEOk)) {
+		struct AppMessage message = { .ucMessageID = MID_APP_CFG_WRITE };
+		xQueueSend(xQueueViewToBackend, (void* ) &message, (TickType_t ) 1000);
+		app_show("D:%d/%d, E: %d/%d", summary.nNodesAEOk, summary.nNodes, summary.nEndpointsSDOk, summary.nEndpoints);
 	}
-	bsum = nEndpointsSDOk + nNodesAEOk;
+	bsum = summary.nEndpointsSDOk + summary.nNodesAEOk;
 }
 
 static int32_t app_register_af(void) {
@@ -109,13 +90,8 @@ static int32_t app_register_af(void) {
 }
 
 void app_scanner() {
-	Node_t *coo = &sys_cfg.Nodes[0];
-	coo->Address = 0;
-	coo->ActiveEndpointCompleted = 0x00;
-	coo->LqiCompleted = 0x00;
-	coo->Type = 0;
-	sys_cfg.NodesCount = 1;
-	zb_zdo_explore(coo);
+	MgmtLqiReqFormat_t req = { .DstAddr = 0, .StartIndex = 0 };
+	ENQUEUE(MID_ZB_ZBEE_LQIREQ, MgmtLqiReqFormat_t, req);
 	xTimerStart(xTimer, 0);
 }
 
@@ -150,6 +126,9 @@ void vAppTaskLoop() {
 			break;
 		case MID_ZB_ZBEE_START:
 			app_start_stack();
+			break;
+		case MID_APP_CFG_WRITE:
+			cfgWrite();
 			break;
 		case MID_ZB_ZBEE_SCAN:
 			app_scanner();
@@ -207,10 +186,10 @@ void vTimerCallback(TimerHandle_t xTimer) {
 void app_init() {
 	rpcInitMq();
 	rpcOpen();
-	xQueueViewToBackend = xQueueCreate(16, sizeof(struct AppMessage));
-	xQueueBackendToView = xQueueCreate(8, sizeof(struct AppMessage));
+	xQueueViewToBackend = xQueueCreate(20, sizeof(struct AppMessage));
+	xQueueBackendToView = xQueueCreate(4, sizeof(struct AppMessage));
 	xTimer = xTimerCreateStatic("Timer", pdMS_TO_TICKS(5000), pdFALSE, (void*) 0, vTimerCallback, &xTimerBuffer);
-	xTaskCreate(vAppTask, "APP", 2048, NULL, 6, NULL);
+	xTaskCreate(vAppTask, "APP", 1024, NULL, 6, NULL);
 	xTaskCreate(vComTask, "COM", 1024, NULL, 5, NULL);
 	xTaskCreate(vPollTask, "POLL", 1024, NULL, 5, NULL);
 }

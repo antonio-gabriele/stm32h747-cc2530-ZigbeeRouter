@@ -10,7 +10,8 @@
 
 #define ZB_OK 0
 #define ZB_KO 1
-
+uint8_t zb_zdo_explore1(Summary_t * summary);
+uint8_t zb_zdo_explore(Node_t * node, Summary_t * summary);
 uint8_t zb_zdo_state_changed(uint8_t newDevState);
 uint8_t zb_zdo_mgmt_remote_lqi(MgmtLqiRspFormat_t *msg);
 uint8_t zb_zdo_simple_descriptor(SimpleDescRspFormat_t *msg);

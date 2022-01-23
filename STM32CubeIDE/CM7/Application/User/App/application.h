@@ -9,7 +9,6 @@
 
 typedef struct {
 	uint16_t Cluster;
-	
 } Cluster_t;
 
 typedef struct {
@@ -40,6 +39,15 @@ typedef struct {
 	Node_t Nodes[MAX_NODES];
 } Configuration_t;
 
+typedef struct {
+	uint8_t nNodes;
+	uint8_t nNodesAEOk;
+	uint8_t nNodesLQOk;
+	uint8_t nEndpoints;
+	uint8_t nEndpointsSDOk;
+	Endpoint_t * E06[64];
+} Summary_t;
+
 #define MID_ZB_RESET_COO 		0x00
 #define MID_ZB_RESET_RTR 		0x01
 #define MID_ZB_ZBEE_START 		0x02
@@ -49,6 +57,8 @@ typedef struct {
 #define MID_ZB_ZBEE_ACTEND		0x05
 #define MID_ZB_ZBEE_SIMDES		0x06
 #define MID_ZB_ZBEE_DATARQ		0x07
+
+#define MID_APP_CFG_WRITE		0x08
 
 #define MID_VW_LOG				0
 
@@ -60,10 +70,9 @@ typedef struct {
 			memcpy(&req, xRxedStructure.content, sizeof(STRUCTNAME)); \
 			FN(&req); }
 
-struct AppMessage
-{
-    char ucMessageID;
-    char content[140];
+struct AppMessage {
+	char ucMessageID;
+	char content[140];
 };
 
 void app_init();

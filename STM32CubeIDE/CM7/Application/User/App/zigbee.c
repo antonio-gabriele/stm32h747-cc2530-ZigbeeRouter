@@ -56,6 +56,8 @@ mtZdoCb_t mtZdoCb = { NULL,       // MT_ZDO_NWK_ADDR_RSP
 		NULL,  //MT_ZDO_MATCH_DESC_RSP_SENT
 		NULL, NULL };
 /********************************************************************************/
+uint8_t af_counter = 0;
+/********************************************************************************/
 uint8_t zb_sys_reset(ResetIndFormat_t *msg) {
 	printf("Reset ZNP Version: %d.%d.%d\n", msg->MajorRel, msg->MinorRel, msg->HwRev);
 	return 0;
@@ -112,40 +114,49 @@ uint8_t zb_zdo_state_changed(uint8_t newDevState) {
 	return SUCCESS;
 }
 
-uint8_t zb_zdo_explore(uint16_t address) {
-	Node_t *node = zb_find_node_by_address(address);
-	if(node == NULL){
-		//uint8_t devType = msg->NeighborLqiList[i].DevTyp_RxOnWhenIdle_Relat & 3;
-		node = &sys_cfg.Nodes[sys_cfg.NodesCount];
-		sys_cfg.NodesCount++;
-		node->LqiCompleted = ZB_KO;
-		node->ActiveEndpointCompleted = ZB_KO;
-		node->Address = address;
-		//node->Type = devType;
+uint8_t zb_zdo_explore1(Summary_t * summary){
+	uint8_t iNode;
+	for (iNode = 0; iNode < sys_cfg.NodesCount; iNode++) {
+		Node_t *node = &sys_cfg.Nodes[iNode];
+		zb_zdo_explore(node, summary);
 	}
+}
+
+uint8_t zb_zdo_explore(Node_t *node, Summary_t *summary) {
+	summary->nNodes++;
 	if (node->ActiveEndpointCompleted != ZB_OK) {
 		ActiveEpReqFormat_t req = { .DstAddr = node->Address, .NwkAddrOfInterest = node->Address };
 		ENQUEUE(MID_ZB_ZBEE_ACTEND, ActiveEpReqFormat_t, req);
+	} else {
+		summary->nNodesAEOk++;
+	}
+	if (node->LqiCompleted != ZB_OK) {
+		MgmtLqiReqFormat_t req = { .DstAddr = node->Address, .StartIndex = 0 };
+		ENQUEUE(MID_ZB_ZBEE_LQIREQ, MgmtLqiReqFormat_t, req);
+	} else {
+		summary->nNodesLQOk++;
 	}
 	if (node->ManufacturerName[0] == 0x00 || node->ModelIdentifier[0] == 0x00) {
 		DataRequestFormat_t req = { .ClusterID = 0, .DstAddr = node->Address, .DstEndpoint = 1, .SrcEndpoint = 1, .Len = 7, .Options = 0, .Radius = 0, .TransID = 1 };
 		req.Data[0] = 0; //ZCL->1
-		req.Data[1] = 0xFF;
+		req.Data[1] = af_counter++;
 		req.Data[2] = 0; //CmdId
 		req.Data[3] = 0x05;
 		req.Data[4] = 0x00;
 		req.Data[5] = 0x04;
 		req.Data[6] = 0x00;
 		ENQUEUE(MID_ZB_ZBEE_DATARQ, DataRequestFormat_t, req);
-
 	}
-	if (node->LqiCompleted == ZB_OK) {
-		//if (node->Type == DEVICETYPE_ROUTER || node->Type == DEVICETYPE_COORDINATOR) {
-			MgmtLqiReqFormat_t req = { .DstAddr = node->Address, .StartIndex = 0 };
-			ENQUEUE(MID_ZB_ZBEE_LQIREQ, MgmtLqiReqFormat_t, req);
-		//} else {
-		//	node->LqiCompleted = 0xFF;
-		//}
+	uint8_t iEndpoint;
+	for (iEndpoint = 0; iEndpoint < node->EndpointCount; iEndpoint++) {
+		summary->nEndpoints++;
+		Endpoint_t *endpoint = &node->Endpoints[iEndpoint];
+		if (endpoint->SimpleDescriptorCompleted > 0) {
+			SimpleDescReqFormat_t req = { .DstAddr = node->Address, .NwkAddrOfInterest = node->Address, .Endpoint = endpoint->Endpoint };
+			ENQUEUE(MID_ZB_ZBEE_SIMDES, SimpleDescReqFormat_t, req)
+		} else {
+			summary->nEndpointsSDOk++;
+		}
 	}
 	return 0;
 }
@@ -164,24 +175,24 @@ uint8_t zb_zdo_mgmt_remote_lqi(MgmtLqiRspFormat_t *msg) {
 		node1->LqiCompleted = ZB_OK;
 	}
 	uint32_t iNeighbor = 0;
+	uint16_t address;
 	for (iNeighbor = 0; iNeighbor < msg->NeighborLqiListCount; iNeighbor++) {
-		uint16_t address = msg->NeighborLqiList[iNeighbor].NetworkAddress;
-		//uint8_t devType = msg->NeighborLqiList[i].DevTyp_RxOnWhenIdle_Relat & 3;
-		zb_zdo_explore(address);
-		/*
-		Node_t *node1 = zb_find_node_by_address(address);
-		if (node1 != NULL) {
-			return msg->Status;
+		address = msg->NeighborLqiList[iNeighbor].NetworkAddress;
+		Node_t *node = zb_find_node_by_address(address);
+		if (node == NULL) {
+			printf("RLQI: %04X <- Welcome\n", address);
+			node = &sys_cfg.Nodes[sys_cfg.NodesCount];
+			sys_cfg.NodesCount++;
+			node->LqiCompleted = ZB_KO;
+			node->ActiveEndpointCompleted = ZB_KO;
+			node->Address = address;
+			node->EndpointCount = 0;
+			node->IEEE = 0;
+			node->ManufacturerName[0] = 0;
+			node->ModelIdentifier[0] = 0;
+			MgmtLqiReqFormat_t req = { .DstAddr = address, .StartIndex = 0 };
+			ENQUEUE(MID_ZB_ZBEE_LQIREQ, MgmtLqiReqFormat_t, req);
 		}
-		printf("mtZdoMgmtLqiRspCb -> Found: %04X, Count: %d\n", address, sys_cfg.NodesCount);
-		Node_t *node = &sys_cfg.Nodes[sys_cfg.NodesCount];
-		sys_cfg.NodesCount++;
-		node->LqiCompleted = 0x00;
-		node->ActiveEndpointCompleted = 0x00;
-		node->Address = address;
-		node->Type = devType;
-		*/
-		//break;
 	}
 	return msg->Status;
 }
@@ -191,19 +202,22 @@ uint8_t zb_zdo_simple_descriptor(SimpleDescRspFormat_t *msg) {
 		return msg->Status;
 	}
 	xTimerReset(xTimer, 0);
-	printf("mtZdoSimpleDescRspCb -> %04X:%d, In: %d\n", msg->NwkAddr, msg->Endpoint, msg->NumInClusters);
 	Node_t *node = zb_find_node_by_address(msg->NwkAddr);
 	Endpoint_t *endpoint = zb_find_endpoint(node, msg->Endpoint);
 	endpoint->SimpleDescriptorCompleted = ZB_OK;
 	endpoint->InClusterCount = msg->NumInClusters;
 	endpoint->OutClusterCount = msg->NumOutClusters;
 	uint32_t i;
+	printf("SDES: %04X.%d", msg->SrcAddr, msg->Endpoint);
 	for (i = 0; i < msg->NumInClusters; i++) {
+		printf(" I%d", msg->InClusterList[i]);
 		endpoint->InClusters[i].Cluster = msg->InClusterList[i];
 	}
 	for (i = 0; i < msg->NumOutClusters; i++) {
+		printf(" O%d", msg->OutClusterList[i]);
 		endpoint->OutClusters[i].Cluster = msg->OutClusterList[i];
 	}
+	printf("\n");
 	return msg->Status;
 }
 
@@ -215,21 +229,23 @@ uint8_t zb_zdo_active_endpoint(ActiveEpRspFormat_t *msg) {
 	Node_t *node = zb_find_node_by_address(msg->SrcAddr);
 	node->ActiveEndpointCompleted = ZB_OK;
 	node->EndpointCount = msg->ActiveEPCount;
-	printf("mtZdoActiveEpRspCb -> Address: %04X, Endpoints: %d\n", msg->SrcAddr, msg->ActiveEPCount);
+	printf("AEND: %04X", msg->SrcAddr);
 	uint32_t i;
 	for (i = 0; i < msg->ActiveEPCount; i++) {
 		uint8_t endpoint = msg->ActiveEPList[i];
 		node->Endpoints[i].Endpoint = endpoint;
+		printf(" %d", endpoint);
 		node->Endpoints[i].SimpleDescriptorCompleted = ZB_KO;
 		SimpleDescReqFormat_t req = { .DstAddr = msg->NwkAddr, .NwkAddrOfInterest = msg->NwkAddr, .Endpoint = endpoint };
 		ENQUEUE(MID_ZB_ZBEE_SIMDES, SimpleDescReqFormat_t, req)
 	}
+	printf("\n");
 	return msg->Status;
 
 }
 
 uint8_t zb_af_incoming_msg(IncomingMsgFormat_t *msg) {
-	if (msg->ClusterId == 0 && msg->Len > 1 && msg->Data[1] == 0xFF) {
+	if (msg->ClusterId == 0 && msg->Len > 1) {
 		Node_t *node = zb_find_node_by_address(msg->SrcAddr);
 		uint8_t j = 3;
 		while (j + 2 < msg->Len) {
@@ -269,7 +285,7 @@ Endpoint_t* zb_find_endpoint(Node_t *node, uint8_t endpoint) {
 Node_t* zb_find_node_by_address(uint16_t address) {
 	uint8_t i1;
 	for (i1 = 0; i1 < sys_cfg.NodesCount; ++i1) {
-		if (sys_cfg.Nodes[i1].IEEE == address) {
+		if (sys_cfg.Nodes[i1].Address == address) {
 			return &sys_cfg.Nodes[i1];
 		}
 	}
@@ -279,17 +295,30 @@ Node_t* zb_find_node_by_address(uint16_t address) {
 Node_t* zb_find_node_by_ieee(uint64_t ieee) {
 	uint8_t i1;
 	for (i1 = 0; i1 < sys_cfg.NodesCount; ++i1) {
-		if (sys_cfg.Nodes[i1].Address == ieee) {
+		if (sys_cfg.Nodes[i1].IEEE == ieee) {
 			return &sys_cfg.Nodes[i1];
 		}
 	}
 	return NULL;
 }
 
-
 uint8_t zb_zdo_end_device_announce(EndDeviceAnnceIndFormat_t *msg) {
-	printf("Joined: 0x%04X\n", msg->NwkAddr);
-	zb_zdo_explore(msg->NwkAddr);
+	uint16_t address = msg->NwkAddr;
+	printf("Joined: 0x%04X\n", address);
+	Node_t *node = zb_find_node_by_address(address);
+	if (node == NULL) {
+		node = &sys_cfg.Nodes[sys_cfg.NodesCount];
+		sys_cfg.NodesCount++;
+		node->LqiCompleted = ZB_KO;
+		node->ActiveEndpointCompleted = ZB_KO;
+		node->Address = address;
+		node->EndpointCount = 0;
+		node->IEEE = msg->IEEEAddr;
+		node->ManufacturerName[0] = 0;
+		node->ModelIdentifier[0] = 0;
+	}
+	Summary_t summary;
+	zb_zdo_explore(node, &summary);
 	return 0x00;
 }
 
