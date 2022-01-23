@@ -51,10 +51,14 @@ void init() {
     FATFS fs;
     FRESULT res;
     BYTE work[_MAX_SS]; // Formats the drive if it has yet to be formatted
-    //res = f_mkfs("0:", FM_FAT32, 0, work, sizeof work);
+    //res = f_mount(&fs, "0:", 0);
     //if(res != FR_OK) {
     //    return;
     //}
+    res = f_mkfs("0:", FM_FAT32, 0, work, sizeof work);
+    if(res != FR_OK) {
+        return;
+    }
     res = f_mount(&fs, "0:", 1);
     if(res != FR_OK) {
         return;
