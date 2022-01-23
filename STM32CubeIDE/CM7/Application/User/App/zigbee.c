@@ -1,10 +1,10 @@
+#include <zigbee.h>
+
 #include "cmsis_os.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-#include <zigbee.h>
 #include <timers.h>
-#include <application.h>
 #include <queue.h>
 #include <system.h>
 #include <mtAf.h>
@@ -112,8 +112,18 @@ uint8_t zb_zdo_state_changed(uint8_t newDevState) {
 	return SUCCESS;
 }
 
-uint8_t zb_zdo_explore(Node_t *node) {
-	if (node->ActiveEndpointCompleted == 0x00) {
+uint8_t zb_zdo_explore(uint16_t address) {
+	Node_t *node = zb_find_node_by_address(address);
+	if(node == NULL){
+		//uint8_t devType = msg->NeighborLqiList[i].DevTyp_RxOnWhenIdle_Relat & 3;
+		node = &sys_cfg.Nodes[sys_cfg.NodesCount];
+		sys_cfg.NodesCount++;
+		node->LqiCompleted = ZB_KO;
+		node->ActiveEndpointCompleted = ZB_KO;
+		node->Address = address;
+		//node->Type = devType;
+	}
+	if (node->ActiveEndpointCompleted != ZB_OK) {
 		ActiveEpReqFormat_t req = { .DstAddr = node->Address, .NwkAddrOfInterest = node->Address };
 		ENQUEUE(MID_ZB_ZBEE_ACTEND, ActiveEpReqFormat_t, req);
 	}
@@ -129,13 +139,13 @@ uint8_t zb_zdo_explore(Node_t *node) {
 		ENQUEUE(MID_ZB_ZBEE_DATARQ, DataRequestFormat_t, req);
 
 	}
-	if (node->LqiCompleted == 0x00) {
-		if (node->Type == DEVICETYPE_ROUTER || node->Type == DEVICETYPE_COORDINATOR) {
+	if (node->LqiCompleted == ZB_OK) {
+		//if (node->Type == DEVICETYPE_ROUTER || node->Type == DEVICETYPE_COORDINATOR) {
 			MgmtLqiReqFormat_t req = { .DstAddr = node->Address, .StartIndex = 0 };
 			ENQUEUE(MID_ZB_ZBEE_LQIREQ, MgmtLqiReqFormat_t, req);
-		} else {
-			node->LqiCompleted = 0xFF;
-		}
+		//} else {
+		//	node->LqiCompleted = 0xFF;
+		//}
 	}
 	return 0;
 }
@@ -150,26 +160,28 @@ uint8_t zb_zdo_mgmt_remote_lqi(MgmtLqiRspFormat_t *msg) {
 		ENQUEUE(MID_ZB_ZBEE_LQIREQ, MgmtLqiReqFormat_t, req)
 	}
 	if (msg->StartIndex + msg->NeighborLqiListCount == msg->NeighborTableEntries) {
-		Node_t *node1 = app_find_node_by_address(msg->SrcAddr);
-		node1->LqiCompleted = 0xFF;
+		Node_t *node1 = zb_find_node_by_address(msg->SrcAddr);
+		node1->LqiCompleted = ZB_OK;
 	}
-	uint32_t i = 0;
-	for (i = 0; i < msg->NeighborLqiListCount; i++) {
-		uint16_t address = msg->NeighborLqiList[i].NetworkAddress;
-		Node_t *node1 = app_find_node_by_address(address);
+	uint32_t iNeighbor = 0;
+	for (iNeighbor = 0; iNeighbor < msg->NeighborLqiListCount; iNeighbor++) {
+		uint16_t address = msg->NeighborLqiList[iNeighbor].NetworkAddress;
+		//uint8_t devType = msg->NeighborLqiList[i].DevTyp_RxOnWhenIdle_Relat & 3;
+		zb_zdo_explore(address);
+		/*
+		Node_t *node1 = zb_find_node_by_address(address);
 		if (node1 != NULL) {
 			return msg->Status;
 		}
 		printf("mtZdoMgmtLqiRspCb -> Found: %04X, Count: %d\n", address, sys_cfg.NodesCount);
-		uint8_t devType = msg->NeighborLqiList[i].DevTyp_RxOnWhenIdle_Relat & 3;
 		Node_t *node = &sys_cfg.Nodes[sys_cfg.NodesCount];
 		sys_cfg.NodesCount++;
 		node->LqiCompleted = 0x00;
 		node->ActiveEndpointCompleted = 0x00;
 		node->Address = address;
 		node->Type = devType;
-		zb_zdo_explore(node);
-		break;
+		*/
+		//break;
 	}
 	return msg->Status;
 }
@@ -180,9 +192,9 @@ uint8_t zb_zdo_simple_descriptor(SimpleDescRspFormat_t *msg) {
 	}
 	xTimerReset(xTimer, 0);
 	printf("mtZdoSimpleDescRspCb -> %04X:%d, In: %d\n", msg->NwkAddr, msg->Endpoint, msg->NumInClusters);
-	Node_t *node = app_find_node_by_address(msg->NwkAddr);
-	Endpoint_t *endpoint = app_find_endpoint(node, msg->Endpoint);
-	endpoint->SimpleDescriptorCompleted = 0xFF;
+	Node_t *node = zb_find_node_by_address(msg->NwkAddr);
+	Endpoint_t *endpoint = zb_find_endpoint(node, msg->Endpoint);
+	endpoint->SimpleDescriptorCompleted = ZB_OK;
 	endpoint->InClusterCount = msg->NumInClusters;
 	endpoint->OutClusterCount = msg->NumOutClusters;
 	uint32_t i;
@@ -200,15 +212,15 @@ uint8_t zb_zdo_active_endpoint(ActiveEpRspFormat_t *msg) {
 		return msg->Status;
 	}
 	xTimerReset(xTimer, 0);
-	Node_t *node = app_find_node_by_address(msg->SrcAddr);
-	node->ActiveEndpointCompleted = 0xFF;
+	Node_t *node = zb_find_node_by_address(msg->SrcAddr);
+	node->ActiveEndpointCompleted = ZB_OK;
 	node->EndpointCount = msg->ActiveEPCount;
 	printf("mtZdoActiveEpRspCb -> Address: %04X, Endpoints: %d\n", msg->SrcAddr, msg->ActiveEPCount);
 	uint32_t i;
 	for (i = 0; i < msg->ActiveEPCount; i++) {
 		uint8_t endpoint = msg->ActiveEPList[i];
 		node->Endpoints[i].Endpoint = endpoint;
-		node->Endpoints[i].SimpleDescriptorCompleted = 0x00;
+		node->Endpoints[i].SimpleDescriptorCompleted = ZB_KO;
 		SimpleDescReqFormat_t req = { .DstAddr = msg->NwkAddr, .NwkAddrOfInterest = msg->NwkAddr, .Endpoint = endpoint };
 		ENQUEUE(MID_ZB_ZBEE_SIMDES, SimpleDescReqFormat_t, req)
 	}
@@ -218,7 +230,7 @@ uint8_t zb_zdo_active_endpoint(ActiveEpRspFormat_t *msg) {
 
 uint8_t zb_af_incoming_msg(IncomingMsgFormat_t *msg) {
 	if (msg->ClusterId == 0 && msg->Len > 1 && msg->Data[1] == 0xFF) {
-		Node_t *node = app_find_node_by_address(msg->SrcAddr);
+		Node_t *node = zb_find_node_by_address(msg->SrcAddr);
 		uint8_t j = 3;
 		while (j + 2 < msg->Len) {
 			uint16_t currentAttributeId = msg->Data[j++];
@@ -244,10 +256,40 @@ uint8_t zb_af_incoming_msg(IncomingMsgFormat_t *msg) {
 	return MT_RPC_SUCCESS;
 }
 
+Endpoint_t* zb_find_endpoint(Node_t *node, uint8_t endpoint) {
+	uint8_t i1;
+	for (i1 = 0; i1 < node->EndpointCount; ++i1) {
+		if (node->Endpoints[i1].Endpoint == endpoint) {
+			return &node->Endpoints[i1];
+		}
+	}
+	return NULL;
+}
+
+Node_t* zb_find_node_by_address(uint16_t address) {
+	uint8_t i1;
+	for (i1 = 0; i1 < sys_cfg.NodesCount; ++i1) {
+		if (sys_cfg.Nodes[i1].IEEE == address) {
+			return &sys_cfg.Nodes[i1];
+		}
+	}
+	return NULL;
+}
+
+Node_t* zb_find_node_by_ieee(uint64_t ieee) {
+	uint8_t i1;
+	for (i1 = 0; i1 < sys_cfg.NodesCount; ++i1) {
+		if (sys_cfg.Nodes[i1].Address == ieee) {
+			return &sys_cfg.Nodes[i1];
+		}
+	}
+	return NULL;
+}
+
+
 uint8_t zb_zdo_end_device_announce(EndDeviceAnnceIndFormat_t *msg) {
 	printf("Joined: 0x%04X\n", msg->NwkAddr);
-	ActiveEpReqFormat_t req = { .DstAddr = msg->NwkAddr, .NwkAddrOfInterest = msg->NwkAddr };
-	ENQUEUE(MID_ZB_ZBEE_ACTEND, ActiveEpReqFormat_t, req);
+	zb_zdo_explore(msg->NwkAddr);
 	return 0x00;
 }
 

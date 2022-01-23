@@ -55,10 +55,10 @@ void init() {
     //if(res != FR_OK) {
     //    return;
     //}
-    res = f_mkfs("0:", FM_FAT32, 0, work, sizeof work);
-    if(res != FR_OK) {
-        return;
-    }
+    //res = f_mkfs("0:", FM_FAT32, 0, work, sizeof work);
+    //if(res != FR_OK) {
+    //    return;
+    //}
     res = f_mount(&fs, "0:", 1);
     if(res != FR_OK) {
         return;

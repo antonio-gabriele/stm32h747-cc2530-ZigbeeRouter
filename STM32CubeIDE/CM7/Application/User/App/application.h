@@ -9,7 +9,7 @@
 
 typedef struct {
 	uint16_t Cluster;
-
+	
 } Cluster_t;
 
 typedef struct {
@@ -25,7 +25,7 @@ typedef struct {
 	uint8_t LqiCompleted;
 	uint8_t ActiveEndpointCompleted;
 	uint16_t Address;
-	uint8_t IEEE[8];
+	uint64_t IEEE;
 	uint8_t Type;
 	uint8_t EndpointCount;
 	uint8_t ManufacturerName[32];
@@ -67,8 +67,6 @@ struct AppMessage
 };
 
 void app_init();
-Node_t* app_find_node_by_address(uint16_t address);
-Endpoint_t* app_find_endpoint(Node_t *node, uint8_t endpoint);
 void app_reset(uint8_t devType);
 void app_summary();
 uint8_t app_show(const char *fmt, ...);

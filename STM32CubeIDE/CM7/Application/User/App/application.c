@@ -66,42 +66,36 @@ void app_reset(uint8_t devType) {
 }
 
 void app_summary() {
-	uint8_t b0 = 0, b1 = 0;
-	uint8_t i0 = 0, i1 = 0;
-	uint8_t m0 = 0, m1 = 0;
-	for (i0 = 0; i0 < sys_cfg.NodesCount; i0++) {
-		b0++;
-		if (sys_cfg.Nodes[i0].ActiveEndpointCompleted == 0x00) {
-			ActiveEpReqFormat_t req = { //
-					.DstAddr = sys_cfg.Nodes[i0].Address, //
-							.NwkAddrOfInterest = sys_cfg.Nodes[i0].Address };
+	uint8_t iNode = 0, iEndpoint = 0;
+	uint8_t nNodes = 0, nNodesAEOk = 0;
+	uint8_t nEndpoints = 0, nEndpointsSDOk = 0;
+	for (iNode = 0; iNode < sys_cfg.NodesCount; iNode++) {
+		nNodes++;
+		Node_t *node = &sys_cfg.Nodes[iNode];
+		if (node->ActiveEndpointCompleted > 0) {
+			ActiveEpReqFormat_t req = { .DstAddr = node->Address, .NwkAddrOfInterest = node->Address };
 			ENQUEUE(MID_ZB_ZBEE_ACTEND, ActiveEpReqFormat_t, req);
-		}
-		if (sys_cfg.Nodes[i0].ActiveEndpointCompleted == 0xFF) {
-			m0++;
-			for (i1 = 0; i1 < sys_cfg.Nodes[i0].EndpointCount; i1++) {
-				b1++;
-				if (sys_cfg.Nodes[i0].Endpoints[i1].SimpleDescriptorCompleted == 0x00) {
-					SimpleDescReqFormat_t req = { //
-							.DstAddr = sys_cfg.Nodes[i0].Address, //
-									.NwkAddrOfInterest = sys_cfg.Nodes[i0].Address, //
-									.Endpoint = sys_cfg.Nodes[i0].Endpoints[i1].Endpoint };
+		} else {
+			nNodesAEOk++;
+			for (iEndpoint = 0; iEndpoint < node->EndpointCount; iEndpoint++) {
+				nEndpoints++;
+				Endpoint_t *endpoint = &node->Endpoints[iEndpoint];
+				if (endpoint->SimpleDescriptorCompleted > 0) {
+					SimpleDescReqFormat_t req = { .DstAddr = node->Address, .NwkAddrOfInterest = node->Address, .Endpoint = endpoint->Endpoint };
 					ENQUEUE(MID_ZB_ZBEE_SIMDES, SimpleDescReqFormat_t, req)
-				}
-				if (sys_cfg.Nodes[i0].Endpoints[i1].SimpleDescriptorCompleted == 0xFF) {
-					m1++;
+				} else {
+					nEndpointsSDOk++;
 				}
 			}
-
 		}
 	}
-	if (m0 < b0) {
+	if (nNodesAEOk < nNodes || nEndpointsSDOk < nEndpoints) {
 		xTimerStart(xTimer, 0);
 	}
-	if (bsum < (b0 + b1)) {
-		app_show("D:%d/%d, E: %d/%d", m0, b0, m1, b1);
+	if (bsum < (nEndpointsSDOk + nNodesAEOk)) {
+		app_show("D:%d/%d, E: %d/%d", nNodesAEOk, nNodes, nEndpointsSDOk, nEndpoints);
 	}
-	bsum = b0 + b1;
+	bsum = nEndpointsSDOk + nNodesAEOk;
 }
 
 static int32_t app_register_af(void) {
@@ -112,26 +106,6 @@ static int32_t app_register_af(void) {
 			.AppInClusterList[0] = 0x0006, .AppNumOutClusters = 0 };
 	status = afRegister(&reg);
 	return status;
-}
-
-Endpoint_t* app_find_endpoint(Node_t *node, uint8_t endpoint) {
-	uint8_t i1;
-	for (i1 = 0; i1 < node->EndpointCount; ++i1) {
-		if (node->Endpoints[i1].Endpoint == endpoint) {
-			return &node->Endpoints[i1];
-		}
-	}
-	return NULL;
-}
-
-Node_t* app_find_node_by_address(uint16_t address) {
-	uint8_t i1;
-	for (i1 = 0; i1 < sys_cfg.NodesCount; ++i1) {
-		if (sys_cfg.Nodes[i1].Address == address) {
-			return &sys_cfg.Nodes[i1];
-		}
-	}
-	return NULL;
 }
 
 void app_scanner() {
