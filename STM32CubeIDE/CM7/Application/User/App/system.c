@@ -14,11 +14,11 @@
 
 extern Configuration_t sys_cfg;
 
-uint8_t cfgRead() {
+uint8_t cfgRead(void *  none) {
 	return CFG_OK;
 }
 
-uint8_t cfgWrite() {
+uint8_t cfgWrite(void * none) {
 	FATFS fs;
 	FRESULT res;
 	UINT bytesWritten;
@@ -47,6 +47,7 @@ uint8_t cfgWrite() {
 		if (res != FR_OK) {
 			return CFG_ERR;
 		}
+
 	}
 	snprintf(writeBuff, sizeof(writeBuff), "]\n}");
 	bytesWritten = strlen(writeBuff);

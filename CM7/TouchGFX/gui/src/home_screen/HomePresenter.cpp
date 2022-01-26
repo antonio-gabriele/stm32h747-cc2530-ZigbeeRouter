@@ -1,13 +1,10 @@
 #include <gui/home_screen/HomeView.hpp>
 #include <gui/home_screen/HomePresenter.hpp>
 
-#include <application.h>
 #include <FreeRTOS.h>
 #include <queue.h>
 #include <stdio.h>
-#include <FreeRTOS.h>
-#include <queue.h>
-#include <stdio.h>
+#include <string.h>
 
 extern QueueHandle_t xQueueBackendToView;
 extern QueueHandle_t xQueueViewToBackend;
@@ -27,8 +24,18 @@ void HomePresenter::tick() {
 	}
 }
 
-void HomePresenter::uiToBe(struct AppMessage *message) {
-	xQueueSend(xQueueViewToBackend, (void* ) message, (TickType_t ) 0);
+void HomePresenter::scan() {
+	void * req = NULL;
+	RUN(app_scanner, req)
+}
+
+void HomePresenter::start() {
+	void * req = NULL;
+	RUN(app_start_stack, req)
+}
+
+void HomePresenter::reset(Fake_t devType) {
+	RUN(app_reset, devType)
 }
 
 void HomePresenter::activate() {

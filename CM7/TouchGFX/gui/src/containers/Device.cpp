@@ -26,7 +26,7 @@ void Device::btnOnOffClick() {
 	req.Data[0] = 1;
 	req.Data[1] = 0xFF;
 	req.Data[2] = 2; //CmdId
-	ENQUEUE(MID_ZB_ZBEE_DATARQ, DataRequestFormat_t, req);
+	RUN(afDataRequest, req);
 }
 
 void Device::bind(Node_t *node) {

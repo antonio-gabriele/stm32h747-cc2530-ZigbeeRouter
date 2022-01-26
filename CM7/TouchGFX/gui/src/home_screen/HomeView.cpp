@@ -12,29 +12,27 @@ void HomeView::displayMessage(char *msg) {
 	while (--stop > (textAreaBuffer + length)) {
 		*stop = *(stop - length - 1);
 	}
-    Unicode::strncpy(textAreaBuffer, msg, length);
+	Unicode::strncpy(textAreaBuffer, msg, length);
 	Unicode::strncpy(textAreaBuffer + length, "\n", 1);
 	this->textArea.invalidate();
 }
 
 void HomeView::btnScanClick() {
-	AppMessage msg = { .ucMessageID = MID_ZB_ZBEE_SCAN };
-	this->presenter->uiToBe(&msg);
+	this->presenter->scan();
 }
 
 void HomeView::btnStartClick() {
-	AppMessage msg = { .ucMessageID = MID_ZB_ZBEE_START };
-	this->presenter->uiToBe(&msg);
+	this->presenter->start();
 }
 
 void HomeView::btnResetCooClick() {
-	AppMessage msg = { .ucMessageID = MID_ZB_RESET_COO };
-	this->presenter->uiToBe(&msg);
+	Fake_t devType = { .u8 = 0};
+	this->presenter->reset(devType);
 }
 
 void HomeView::btnResetRtrClick() {
-	AppMessage msg = { .ucMessageID = MID_ZB_RESET_RTR };
-	this->presenter->uiToBe(&msg);
+	Fake_t devType = { .u8 = 1};
+	this->presenter->reset(devType);
 }
 
 void HomeView::setupScreen() {

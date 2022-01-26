@@ -114,7 +114,7 @@ uint8_t zb_zdo_state_changed(uint8_t newDevState) {
 	return SUCCESS;
 }
 
-uint8_t zb_zdo_explore1(Summary_t * summary){
+uint8_t zb_zdo_explore1(Summary_t *summary) {
 	uint8_t iNode;
 	for (iNode = 0; iNode < sys_cfg.NodesCount; iNode++) {
 		Node_t *node = &sys_cfg.Nodes[iNode];
@@ -126,13 +126,13 @@ uint8_t zb_zdo_explore(Node_t *node, Summary_t *summary) {
 	summary->nNodes++;
 	if (node->ActiveEndpointCompleted != ZB_OK) {
 		ActiveEpReqFormat_t req = { .DstAddr = node->Address, .NwkAddrOfInterest = node->Address };
-		ENQUEUE(MID_ZB_ZBEE_ACTEND, ActiveEpReqFormat_t, req);
+		RUN(zdoActiveEpReq, req)
 	} else {
 		summary->nNodesAEOk++;
 	}
 	if (node->LqiCompleted != ZB_OK) {
 		MgmtLqiReqFormat_t req = { .DstAddr = node->Address, .StartIndex = 0 };
-		ENQUEUE(MID_ZB_ZBEE_LQIREQ, MgmtLqiReqFormat_t, req);
+		RUN(zdoMgmtLqiReq, req)
 	} else {
 		summary->nNodesLQOk++;
 	}
@@ -145,7 +145,7 @@ uint8_t zb_zdo_explore(Node_t *node, Summary_t *summary) {
 		req.Data[4] = 0x00;
 		req.Data[5] = 0x04;
 		req.Data[6] = 0x00;
-		ENQUEUE(MID_ZB_ZBEE_DATARQ, DataRequestFormat_t, req);
+		RUN(afDataRequest, req)
 	}
 	uint8_t iEndpoint;
 	for (iEndpoint = 0; iEndpoint < node->EndpointCount; iEndpoint++) {
@@ -153,7 +153,7 @@ uint8_t zb_zdo_explore(Node_t *node, Summary_t *summary) {
 		Endpoint_t *endpoint = &node->Endpoints[iEndpoint];
 		if (endpoint->SimpleDescriptorCompleted > 0) {
 			SimpleDescReqFormat_t req = { .DstAddr = node->Address, .NwkAddrOfInterest = node->Address, .Endpoint = endpoint->Endpoint };
-			ENQUEUE(MID_ZB_ZBEE_SIMDES, SimpleDescReqFormat_t, req)
+			RUN(zdoSimpleDescReq, req)
 		} else {
 			summary->nEndpointsSDOk++;
 		}
@@ -168,7 +168,7 @@ uint8_t zb_zdo_mgmt_remote_lqi(MgmtLqiRspFormat_t *msg) {
 	xTimerReset(xTimer, 0);
 	if (msg->StartIndex + msg->NeighborLqiListCount < msg->NeighborTableEntries) {
 		MgmtLqiReqFormat_t req = { .DstAddr = msg->SrcAddr, .StartIndex = msg->StartIndex + msg->NeighborLqiListCount };
-		ENQUEUE(MID_ZB_ZBEE_LQIREQ, MgmtLqiReqFormat_t, req)
+		RUN(zdoMgmtLqiReq, req)
 	}
 	if (msg->StartIndex + msg->NeighborLqiListCount == msg->NeighborTableEntries) {
 		Node_t *node1 = zb_find_node_by_address(msg->SrcAddr);
@@ -191,7 +191,7 @@ uint8_t zb_zdo_mgmt_remote_lqi(MgmtLqiRspFormat_t *msg) {
 			node->ManufacturerName[0] = 0;
 			node->ModelIdentifier[0] = 0;
 			MgmtLqiReqFormat_t req = { .DstAddr = address, .StartIndex = 0 };
-			ENQUEUE(MID_ZB_ZBEE_LQIREQ, MgmtLqiReqFormat_t, req);
+			RUN(zdoMgmtLqiReq, req)
 		}
 	}
 	return msg->Status;
@@ -212,6 +212,15 @@ uint8_t zb_zdo_simple_descriptor(SimpleDescRspFormat_t *msg) {
 	for (i = 0; i < msg->NumInClusters; i++) {
 		printf(" I%d", msg->InClusterList[i]);
 		endpoint->InClusters[i].Cluster = msg->InClusterList[i];
+		if (msg->InClusterList[i] == 0x06) {
+			DataRequestFormat_t req = { .ClusterID = 6, .DstAddr = msg->NwkAddr, .DstEndpoint = msg->Endpoint, .SrcEndpoint = 1, .Len = 5, .Options = 0, .Radius = 0, .TransID = 1 };
+			req.Data[0] = 0; //ZCL->1
+			req.Data[1] = af_counter++;
+			req.Data[2] = 0; //CmdId
+			req.Data[3] = 0x00;
+			req.Data[4] = 0x00;
+			RUN(afDataRequest, req)
+		}
 	}
 	for (i = 0; i < msg->NumOutClusters; i++) {
 		printf(" O%d", msg->OutClusterList[i]);
@@ -237,7 +246,7 @@ uint8_t zb_zdo_active_endpoint(ActiveEpRspFormat_t *msg) {
 		printf(" %d", endpoint);
 		node->Endpoints[i].SimpleDescriptorCompleted = ZB_KO;
 		SimpleDescReqFormat_t req = { .DstAddr = msg->NwkAddr, .NwkAddrOfInterest = msg->NwkAddr, .Endpoint = endpoint };
-		ENQUEUE(MID_ZB_ZBEE_SIMDES, SimpleDescReqFormat_t, req)
+		RUN(zdoSimpleDescReq, req)
 	}
 	printf("\n");
 	return msg->Status;
@@ -245,29 +254,61 @@ uint8_t zb_zdo_active_endpoint(ActiveEpRspFormat_t *msg) {
 }
 
 uint8_t zb_af_incoming_msg(IncomingMsgFormat_t *msg) {
-	if (msg->ClusterId == 0 && msg->Len > 1) {
-		Node_t *node = zb_find_node_by_address(msg->SrcAddr);
-		uint8_t j = 3;
-		while (j + 2 < msg->Len) {
-			uint16_t currentAttributeId = msg->Data[j++];
-			currentAttributeId |= msg->Data[j++] << 8;
-			uint8_t success = msg->Data[j++];
-			if (success == 0) {
-				uint8_t zigbeeType = msg->Data[j++];
-				if (zigbeeType == 66) {
-					uint8_t strlen = msg->Data[j++];
-					uint8_t *str = &(msg->Data[j]);
-					if (currentAttributeId == 5) {
-						memcpy(node->ModelIdentifier, str, strlen);
-					} else {
-						memcpy(node->ManufacturerName, str, strlen);
+	switch(msg->ClusterId)
+	{
+		case 0:
+		{
+			Node_t *node = zb_find_node_by_address(msg->SrcAddr);
+			uint8_t j = 3;
+			while (j + 2 < msg->Len) {
+				uint16_t currentAttributeId = msg->Data[j++];
+				currentAttributeId |= msg->Data[j++] << 8;
+				uint8_t success = msg->Data[j++];
+				if (success == 0) {
+					uint8_t zigbeeType = msg->Data[j++];
+					if (zigbeeType == 66) {
+						uint8_t strlen = msg->Data[j++];
+						uint8_t *str = &(msg->Data[j]);
+						if (currentAttributeId == 5) {
+							memcpy(node->ModelIdentifier, str, strlen);
+						} else {
+							memcpy(node->ManufacturerName, str, strlen);
+						}
+						j += strlen;
 					}
-					j += strlen;
 				}
 			}
+			xTimerReset(xTimer, 0);
 		}
-		xTimerReset(xTimer, 0);
-
+		break;
+		case 6:
+		{
+			printf(" RA");
+			/*
+			Node_t *node = zb_find_node_by_address(msg->SrcAddr);
+			uint8_t j = 3;
+			while (j + 2 < msg->Len) {
+				uint16_t currentAttributeId = msg->Data[j++];
+				currentAttributeId |= msg->Data[j++] << 8;
+				uint8_t success = msg->Data[j++];
+				if (success == 0) {
+					uint8_t zigbeeType = msg->Data[j++];
+					if (zigbeeType == 66) {
+						uint8_t strlen = msg->Data[j++];
+						uint8_t *str = &(msg->Data[j]);
+						if (currentAttributeId == 5) {
+							memcpy(node->ModelIdentifier, str, strlen);
+						} else {
+							memcpy(node->ManufacturerName, str, strlen);
+						}
+						j += strlen;
+					}
+				}
+			}
+			xTimerReset(xTimer, 0);
+			*/
+		}
+		break;
 	}
 	return MT_RPC_SUCCESS;
 }

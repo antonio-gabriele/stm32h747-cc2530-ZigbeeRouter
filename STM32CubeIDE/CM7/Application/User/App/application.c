@@ -43,13 +43,13 @@ uint8_t app_show(const char *fmt, ...) {
 	return 0;
 }
 
-void app_reset(uint8_t devType) {
+uint8_t app_reset(Fake_t *devType) {
 	uint8_t status = 0;
 	OsalNvWriteFormat_t req = { .Id = ZCD_NV_STARTUP_OPTION, .Offset = 0, .Len = 1, .Value = { 0x03 } };
 	status = sysOsalNvWrite(&req);
 	status = sysResetReq(&const_hard_rst);
 	vTaskDelay(4000);
-	OsalNvWriteFormat_t nvWrite = { .Id = ZCD_NV_LOGICAL_TYPE, .Offset = 0, .Len = 1, .Value[0] = devType };
+	OsalNvWriteFormat_t nvWrite = { .Id = ZCD_NV_LOGICAL_TYPE, .Offset = 0, .Len = 1, .Value[0] = devType->u8 };
 	status = sysOsalNvWrite(&nvWrite);
 	if (status != 0) {
 		app_show("Errore");
@@ -63,17 +63,18 @@ void app_reset(uint8_t devType) {
 	sys_cfg.DeviceType = devType;
 	sys_cfg.NodesCount = 0;
 	cfgWrite();
+	return 0;
 }
 
-void app_summary() {
+uint8_t app_summary(void * none) {
 	Summary_t summary = { 0 };
 	zb_zdo_explore1(&summary);
 	if (summary.nNodesAEOk < summary.nNodes || summary.nEndpointsSDOk < summary.nEndpoints) {
 		xTimerStart(xTimer, 0);
 	}
 	if (bsum < (summary.nEndpointsSDOk + summary.nNodesAEOk)) {
-		struct AppMessage message = { .ucMessageID = MID_APP_CFG_WRITE };
-		xQueueSend(xQueueViewToBackend, (void* ) &message, (TickType_t ) 1000);
+		void * req = 0;
+		RUN(cfgWrite, req)
 		app_show("D:%d/%d, E: %d/%d", summary.nNodesAEOk, summary.nNodes, summary.nEndpointsSDOk, summary.nEndpoints);
 	}
 	bsum = summary.nEndpointsSDOk + summary.nNodesAEOk;
@@ -89,17 +90,18 @@ static int32_t app_register_af(void) {
 	return status;
 }
 
-void app_scanner() {
+uint8_t app_scanner(void * none) {
 	MgmtLqiReqFormat_t req = { .DstAddr = 0, .StartIndex = 0 };
-	ENQUEUE(MID_ZB_ZBEE_LQIREQ, MgmtLqiReqFormat_t, req);
+	RUN(zdoMgmtLqiReq, req)
 	xTimerStart(xTimer, 0);
+	return 0;
 }
 
-void app_start_stack() {
+uint8_t app_start_stack(void * none) {
 	uint8_t status = app_register_af();
 	if (status != MT_RPC_SUCCESS) {
 		printf("Register Af failed");
-		return;
+		return 1;
 	}
 	status = zdoInit();
 	if (status == NEW_NETWORK) {
@@ -112,41 +114,18 @@ void app_start_stack() {
 		app_show("Start failed");
 		status = -1;
 	}
+	return status;
 }
 
 void vAppTaskLoop() {
 	struct AppMessage xRxedStructure;
 	if (xQueueReceive(xQueueViewToBackend, (struct AppMessage*) &xRxedStructure, (TickType_t) 10) == pdPASS) {
-		switch (xRxedStructure.ucMessageID) {
-		case MID_ZB_RESET_COO:
-			app_reset(DEVICETYPE_COORDINATOR);
-			break;
-		case MID_ZB_RESET_RTR:
-			app_reset(DEVICETYPE_ROUTER);
-			break;
-		case MID_ZB_ZBEE_START:
-			app_start_stack();
-			break;
-		case MID_APP_CFG_WRITE:
-			cfgWrite();
-			break;
-		case MID_ZB_ZBEE_SCAN:
-			app_scanner();
-			break;
-		case MID_ZB_ZBEE_LQIREQ:
-			DEQUEUE(MgmtLqiReqFormat_t, zdoMgmtLqiReq)
-			break;
-		case MID_ZB_ZBEE_ACTEND:
-			DEQUEUE(ActiveEpReqFormat_t, zdoActiveEpReq)
-			break;
-		case MID_ZB_ZBEE_SIMDES:
-			DEQUEUE(SimpleDescReqFormat_t, zdoSimpleDescReq)
-			break;
-		case MID_ZB_ZBEE_DATARQ:
-			DEQUEUE(DataRequestFormat_t, afDataRequest)
+		if (xRxedStructure.fn != NULL) {
+			void (*fn)(void*) = xRxedStructure.fn;
+			fn(xRxedStructure.content);
 		}
 	}
-	rpcWaitMqClientMsg(10);
+	//rpcWaitMqClientMsg(10);
 }
 
 void vAppTask(void *pvParameters) {
@@ -165,31 +144,34 @@ void vAppTask(void *pvParameters) {
 	while (1)
 		vAppTaskLoop();
 }
-
+/*
 void vPollTask(void *pvParameters) {
 	while (1) {
-		rpcWaitMqClientMsg(0xFFFF);
+		rpcWaitMqClientMsg(10);
+		vTaskDelay(1);
 	}
 }
-
+*/
 void vComTask(void *pvParameters) {
 	while (1) {
 		rpcProcess();
-		vTaskDelay(1);
+		rpcWaitMqClientMsg(10);
+		//vTaskDelay(1);
 	}
 }
 
 void vTimerCallback(TimerHandle_t xTimer) {
-	app_summary();
+	app_summary(NULL);
 }
 
-void app_init() {
+uint8_t app_init(void * none) {
 	rpcInitMq();
 	rpcOpen();
-	xQueueViewToBackend = xQueueCreate(20, sizeof(struct AppMessage));
+	xQueueViewToBackend = xQueueCreate(16, sizeof(struct AppMessage));
 	xQueueBackendToView = xQueueCreate(4, sizeof(struct AppMessage));
 	xTimer = xTimerCreateStatic("Timer", pdMS_TO_TICKS(5000), pdFALSE, (void*) 0, vTimerCallback, &xTimerBuffer);
-	xTaskCreate(vAppTask, "APP", 1024, NULL, 6, NULL);
-	xTaskCreate(vComTask, "COM", 1024, NULL, 5, NULL);
-	xTaskCreate(vPollTask, "POLL", 1024, NULL, 5, NULL);
+	xTaskCreate(vAppTask, "APP", 1024, NULL, 8, NULL);
+	//xTaskCreate(vPollTask, "POLL", 1024, NULL, 7, NULL);
+	xTaskCreate(vComTask, "COM", 1024, NULL, 6, NULL);
+	return 0;
 }

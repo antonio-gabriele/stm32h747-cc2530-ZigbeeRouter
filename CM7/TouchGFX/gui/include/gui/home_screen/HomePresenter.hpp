@@ -4,6 +4,10 @@
 #include <gui/model/ModelListener.hpp>
 #include <mvp/Presenter.hpp>
 
+extern "C" {
+	#include <application.h>
+}
+
 using namespace touchgfx;
 
 class HomeView;
@@ -24,8 +28,10 @@ public:
      * (ie. made inactive). Teardown functionality can be placed here.
      */
     virtual void deactivate();
-    virtual void uiToBe(struct AppMessage *message);
     virtual void tick();
+    virtual void start();
+    virtual void scan();
+    virtual void reset(Fake_t);
     virtual ~HomePresenter() {};
 
 private:

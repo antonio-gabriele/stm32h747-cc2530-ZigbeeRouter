@@ -9,6 +9,7 @@
 
 typedef struct {
 	uint16_t Cluster;
+	uint8_t A0;
 } Cluster_t;
 
 typedef struct {
@@ -45,39 +46,34 @@ typedef struct {
 	uint8_t nNodesLQOk;
 	uint8_t nEndpoints;
 	uint8_t nEndpointsSDOk;
-	Endpoint_t * E06[64];
+	Endpoint_t *E06[64];
 } Summary_t;
 
-#define MID_ZB_RESET_COO 		0x00
-#define MID_ZB_RESET_RTR 		0x01
-#define MID_ZB_ZBEE_START 		0x02
-#define MID_ZB_ZBEE_SCAN 		0x03
-
-#define MID_ZB_ZBEE_LQIREQ		0x04
-#define MID_ZB_ZBEE_ACTEND		0x05
-#define MID_ZB_ZBEE_SIMDES		0x06
-#define MID_ZB_ZBEE_DATARQ		0x07
-
-#define MID_APP_CFG_WRITE		0x08
+typedef union {
+	uint8_t u8;
+	uint16_t u16;
+	uint32_t u32;
+} Fake_t;
 
 #define MID_VW_LOG				0
 
-#define ENQUEUE(ID, STRUCTNAME, OBJECT) struct AppMessage message = { .ucMessageID = ID }; \
-		memcpy(message.content, &OBJECT, sizeof(STRUCTNAME)); \
-		xQueueSend(xQueueViewToBackend, (void* ) &message, (TickType_t ) 0);
 
-#define DEQUEUE(STRUCTNAME, FN) { STRUCTNAME req; \
-			memcpy(&req, xRxedStructure.content, sizeof(STRUCTNAME)); \
-			FN(&req); }
+#define RUN(FN,PAR)	\
+	struct AppMessage message = { .fn = (void (*)(void*)) (&FN) }; \
+	memcpy(message.params, &PAR, sizeof(PAR)); \
+	xQueueSend(xQueueViewToBackend, (void* ) &message, (TickType_t ) 10);
+
 
 struct AppMessage {
-	char ucMessageID;
-	char content[140];
+	void (*fn)(void*);
+	char params[140];
 };
 
-void app_init();
-void app_reset(uint8_t devType);
-void app_summary();
+uint8_t app_scanner(void * none);
+uint8_t app_start_stack(void * none);
+uint8_t app_init(void * none);
+uint8_t app_reset(Fake_t* devType);
+uint8_t app_summary(void * none);
 uint8_t app_show(const char *fmt, ...);
 
 #endif
