@@ -25,7 +25,6 @@ public:
      */
     virtual void deactivate();
     virtual void tick();
-    virtual void displayMessage(char *);
     virtual ~ControllerPresenter() {};
 
 private:

@@ -253,64 +253,85 @@ uint8_t zb_zdo_active_endpoint(ActiveEpRspFormat_t *msg) {
 
 }
 
-uint8_t zb_af_incoming_msg(IncomingMsgFormat_t *msg) {
-	switch(msg->ClusterId)
-	{
-		case 0:
-		{
-			Node_t *node = zb_find_node_by_address(msg->SrcAddr);
-			uint8_t j = 3;
-			while (j + 2 < msg->Len) {
-				uint16_t currentAttributeId = msg->Data[j++];
-				currentAttributeId |= msg->Data[j++] << 8;
-				uint8_t success = msg->Data[j++];
-				if (success == 0) {
-					uint8_t zigbeeType = msg->Data[j++];
-					if (zigbeeType == 66) {
-						uint8_t strlen = msg->Data[j++];
-						uint8_t *str = &(msg->Data[j]);
-						if (currentAttributeId == 5) {
-							memcpy(node->ModelIdentifier, str, strlen);
-						} else {
-							memcpy(node->ManufacturerName, str, strlen);
-						}
-						j += strlen;
-					}
+uint8_t zb_af_incoming_msg_cmd01_c00(IncomingMsgFormat_t *msg) {
+	Node_t *node = zb_find_node_by_address(msg->SrcAddr);
+	uint8_t j = 3;
+	while (j + 2 < msg->Len) {
+		uint16_t currentAttributeId = msg->Data[j++];
+		currentAttributeId |= msg->Data[j++] << 8;
+		uint8_t success = msg->Data[j++];
+		if (success == 0) {
+			uint8_t zigbeeType = msg->Data[j++];
+			if (zigbeeType == 66) {
+				uint8_t strlen = msg->Data[j++];
+				uint8_t *str = &(msg->Data[j]);
+				if (currentAttributeId == 5) {
+					memcpy(node->ModelIdentifier, str, strlen);
+				} else {
+					memcpy(node->ManufacturerName, str, strlen);
 				}
+				j += strlen;
 			}
-			xTimerReset(xTimer, 0);
 		}
+	}
+}
+
+uint8_t zb_af_incoming_msg_cmd01_c06(IncomingMsgFormat_t *msg) {
+	printf(" RA");
+	/*
+	 Node_t *node = zb_find_node_by_address(msg->SrcAddr);
+	 uint8_t j = 3;
+	 while (j + 2 < msg->Len) {
+	 uint16_t currentAttributeId = msg->Data[j++];
+	 currentAttributeId |= msg->Data[j++] << 8;
+	 uint8_t success = msg->Data[j++];
+	 if (success == 0) {
+	 uint8_t zigbeeType = msg->Data[j++];
+	 if (zigbeeType == 66) {
+	 uint8_t strlen = msg->Data[j++];
+	 uint8_t *str = &(msg->Data[j]);
+	 if (currentAttributeId == 5) {
+	 memcpy(node->ModelIdentifier, str, strlen);
+	 } else {
+	 memcpy(node->ManufacturerName, str, strlen);
+	 }
+	 j += strlen;
+	 }
+	 }
+	 }
+	 xTimerReset(xTimer, 0);
+	 */
+}
+
+uint8_t zb_af_incoming_msg_cmd01(IncomingMsgFormat_t *msg) {
+	switch (msg->ClusterId) {
+	case 0:
+		zb_af_incoming_msg_cmd01_c00(msg);
 		break;
-		case 6:
-		{
-			printf(" RA");
-			/*
-			Node_t *node = zb_find_node_by_address(msg->SrcAddr);
-			uint8_t j = 3;
-			while (j + 2 < msg->Len) {
-				uint16_t currentAttributeId = msg->Data[j++];
-				currentAttributeId |= msg->Data[j++] << 8;
-				uint8_t success = msg->Data[j++];
-				if (success == 0) {
-					uint8_t zigbeeType = msg->Data[j++];
-					if (zigbeeType == 66) {
-						uint8_t strlen = msg->Data[j++];
-						uint8_t *str = &(msg->Data[j]);
-						if (currentAttributeId == 5) {
-							memcpy(node->ModelIdentifier, str, strlen);
-						} else {
-							memcpy(node->ManufacturerName, str, strlen);
-						}
-						j += strlen;
-					}
-				}
-			}
-			xTimerReset(xTimer, 0);
-			*/
-		}
+	case 6:
+		zb_af_incoming_msg_cmd01_c06(msg);
 		break;
 	}
+
+}
+uint8_t zb_af_incoming_msg(IncomingMsgFormat_t *msg) {
+	switch (msg->Data[0]) {
+	case 0x01:
+		zb_af_incoming_msg_cmd01(msg);
+		break;
+	}
+	xTimerReset(xTimer, 0);
 	return MT_RPC_SUCCESS;
+}
+
+Cluster_t* zb_find_cluster(Endpoint_t *endpoint, uint8_t cluster) {
+	uint8_t i1;
+	for (i1 = 0; i1 < endpoint->InClusterCount; ++i1) {
+		if (endpoint->InClusters[i1].Cluster == cluster) {
+			return &endpoint->InClusters[i1];
+		}
+	}
+	return NULL;
 }
 
 Endpoint_t* zb_find_endpoint(Node_t *node, uint8_t endpoint) {

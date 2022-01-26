@@ -12,10 +12,6 @@ HomePresenter::HomePresenter(HomeView &v) :
 		view(v) {
 }
 
-void HomePresenter::displayMessage(char * message){
-	this->view.displayMessage(message);
-}
-
 void HomePresenter::tick() {
 	this->view.tick();
 }

@@ -32,7 +32,6 @@ public:
     virtual void start();
     virtual void scan();
     virtual void reset(Fake_t);
-    virtual void displayMessage(char *);
     virtual ~HomePresenter() {};
 
 private:

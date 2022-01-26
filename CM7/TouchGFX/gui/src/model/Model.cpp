@@ -8,8 +8,3 @@ Model::Model() :
 void Model::tick() {
 	this->modelListener->tick();
 }
-
-
-void Model::displayMessage(char * message) {
-	this->modelListener->displayMessage(message);
-}

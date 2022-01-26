@@ -19,6 +19,3 @@ void ControllerView::setupScreen() {
 void ControllerView::tearDownScreen() {
 	ControllerViewBase::tearDownScreen();
 }
-
-void ControllerView::displayMessage(char* msg) {
-}

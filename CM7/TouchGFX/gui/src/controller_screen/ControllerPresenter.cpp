@@ -4,25 +4,16 @@
 #include <FreeRTOS.h>
 #include <queue.h>
 
-extern QueueHandle_t xQueueBackendToView;
-extern QueueHandle_t xQueueViewToBackend;
-
-ControllerPresenter::ControllerPresenter(ControllerView& v)
-    : view(v)
-{
+ControllerPresenter::ControllerPresenter(ControllerView &v) :
+		view(v) {
 
 }
 
-void ControllerPresenter::displayMessage(char * message){
-	this->view.displayMessage(message);
+void ControllerPresenter::activate() {
+	this->model->bind(this);
 }
 
-void ControllerPresenter::activate()
-{
-}
-
-void ControllerPresenter::deactivate()
-{
+void ControllerPresenter::deactivate() {
 }
 
 void ControllerPresenter::tick() {

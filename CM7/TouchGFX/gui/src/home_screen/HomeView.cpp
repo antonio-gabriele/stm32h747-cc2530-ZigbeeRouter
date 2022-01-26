@@ -3,14 +3,18 @@
 #include <application.h>
 #include <memory.h>
 
-static struct HomeView* homeView;
+static struct HomeView *homeView;
 
-HomeView::HomeView() {
-	homeView = this;
-	flagInvalidate = false;
+extern "C" void call_C_displayMessage(char *message) {
+	if (homeView)
+		homeView->displayMessage(message);
 }
 
-void HomeView::displayMessage(char* msg) {
+HomeView::HomeView() {
+	flg1 = false;
+}
+
+void HomeView::displayMessage(char *msg) {
 	uint16_t length = strlen(msg);
 	Unicode::UnicodeChar *stop = textAreaBuffer + TEXTAREA_SIZE;
 	while (--stop > (textAreaBuffer + length)) {
@@ -18,7 +22,7 @@ void HomeView::displayMessage(char* msg) {
 	}
 	Unicode::strncpy(textAreaBuffer, msg, length);
 	Unicode::strncpy(textAreaBuffer + length, "\n", 1);
-	flagInvalidate = true;
+	flg1 = true;
 }
 
 void HomeView::btnScanClick() {
@@ -30,31 +34,28 @@ void HomeView::btnStartClick() {
 }
 
 void HomeView::btnResetCooClick() {
-	Fake_t devType = { .u8 = 0};
+	Fake_t devType = { .u8 = 0 };
 	this->presenter->reset(devType);
 }
 
 void HomeView::btnResetRtrClick() {
-	Fake_t devType = { .u8 = 1};
+	Fake_t devType = { .u8 = 1 };
 	this->presenter->reset(devType);
 }
 
 void HomeView::setupScreen() {
+	homeView = this;
 	HomeViewBase::setupScreen();
 }
 
 void HomeView::tearDownScreen() {
+	homeView = 0;
 	HomeViewBase::tearDownScreen();
 }
 
 void HomeView::tick() {
-	if(flagInvalidate){
-		flagInvalidate = false;
+	if (flg1) {
+		flg1 = false;
 		this->textArea.invalidate();
 	}
 }
-
-extern "C" void call_C_displayMessage(char *message) {
-	homeView->displayMessage(message);
-}
-

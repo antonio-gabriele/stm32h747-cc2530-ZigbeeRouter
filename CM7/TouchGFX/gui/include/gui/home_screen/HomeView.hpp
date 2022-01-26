@@ -18,7 +18,7 @@ public:
     virtual void displayMessage(char*);
     virtual void tick();
 private:
-	bool flagInvalidate;
+	bool flg1;
 protected:
 };
 
