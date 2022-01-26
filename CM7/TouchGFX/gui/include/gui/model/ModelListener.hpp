@@ -16,6 +16,7 @@ public:
     }
 
     virtual void tick();
+    virtual void displayMessage(char*);
 protected:
     Model* model;
 };

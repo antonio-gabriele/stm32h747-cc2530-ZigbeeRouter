@@ -57,23 +57,21 @@ typedef union {
 
 #define MID_VW_LOG				0
 
-
 #define RUN(FN,PAR)	\
 	struct AppMessage message = { .fn = (void (*)(void*)) (&FN) }; \
 	memcpy(message.params, &PAR, sizeof(PAR)); \
 	xQueueSend(xQueueViewToBackend, (void* ) &message, (TickType_t ) 10);
-
 
 struct AppMessage {
 	void (*fn)(void*);
 	char params[140];
 };
 
-uint8_t app_scanner(void * none);
-uint8_t app_start_stack(void * none);
-uint8_t app_init(void * none);
-uint8_t app_reset(Fake_t* devType);
-uint8_t app_summary(void * none);
+uint8_t app_scanner(void *none);
+uint8_t app_start_stack(void *none);
+uint8_t app_init(void *none);
+uint8_t app_reset(Fake_t *devType);
+uint8_t app_summary(void *none);
 uint8_t app_show(const char *fmt, ...);
 
 #endif

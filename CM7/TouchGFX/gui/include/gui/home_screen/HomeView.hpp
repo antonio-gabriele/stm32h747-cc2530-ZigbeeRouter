@@ -15,7 +15,10 @@ public:
     virtual void btnStartClick();
     virtual void btnResetRtrClick();
     virtual void btnResetCooClick();
-    virtual void displayMessage(char *);
+    virtual void displayMessage(char*);
+    virtual void tick();
+private:
+	bool flagInvalidate;
 protected:
 };
 

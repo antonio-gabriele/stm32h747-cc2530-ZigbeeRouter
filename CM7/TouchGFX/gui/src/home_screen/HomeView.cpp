@@ -3,10 +3,14 @@
 #include <application.h>
 #include <memory.h>
 
+static struct HomeView* homeView;
+
 HomeView::HomeView() {
+	homeView = this;
+	flagInvalidate = false;
 }
 
-void HomeView::displayMessage(char *msg) {
+void HomeView::displayMessage(char* msg) {
 	uint16_t length = strlen(msg);
 	Unicode::UnicodeChar *stop = textAreaBuffer + TEXTAREA_SIZE;
 	while (--stop > (textAreaBuffer + length)) {
@@ -14,7 +18,7 @@ void HomeView::displayMessage(char *msg) {
 	}
 	Unicode::strncpy(textAreaBuffer, msg, length);
 	Unicode::strncpy(textAreaBuffer + length, "\n", 1);
-	this->textArea.invalidate();
+	flagInvalidate = true;
 }
 
 void HomeView::btnScanClick() {
@@ -42,3 +46,15 @@ void HomeView::setupScreen() {
 void HomeView::tearDownScreen() {
 	HomeViewBase::tearDownScreen();
 }
+
+void HomeView::tick() {
+	if(flagInvalidate){
+		flagInvalidate = false;
+		this->textArea.invalidate();
+	}
+}
+
+extern "C" void call_C_displayMessage(char *message) {
+	homeView->displayMessage(message);
+}
+

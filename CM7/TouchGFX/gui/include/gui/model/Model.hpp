@@ -3,18 +3,17 @@
 
 class ModelListener;
 
-class Model
-{
+class Model {
 public:
-    Model();
+	Model();
 
-    void bind(ModelListener* listener)
-    {
-        modelListener = listener;
-    }
-    void tick();
+	void bind(ModelListener *listener) {
+		modelListener = listener;
+	}
+	void tick();
+	void displayMessage(char*);
 protected:
-    ModelListener* modelListener;
+	ModelListener *modelListener;
 };
 
 #endif // MODEL_HPP

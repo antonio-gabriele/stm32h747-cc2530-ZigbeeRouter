@@ -6,22 +6,18 @@
 #include <stdio.h>
 #include <string.h>
 
-extern QueueHandle_t xQueueBackendToView;
 extern QueueHandle_t xQueueViewToBackend;
 
 HomePresenter::HomePresenter(HomeView &v) :
 		view(v) {
 }
 
+void HomePresenter::displayMessage(char * message){
+	this->view.displayMessage(message);
+}
+
 void HomePresenter::tick() {
-	struct AppMessage xRxedStructure;
-	if (xQueueReceive(xQueueBackendToView, (struct AppMessage*) &xRxedStructure, (TickType_t) 10) == pdPASS) {
-		switch (xRxedStructure.ucMessageID) {
-		case MID_VW_LOG:
-			this->view.displayMessage(xRxedStructure.content);
-			break;
-		}
-	}
+	this->view.tick();
 }
 
 void HomePresenter::scan() {
@@ -43,5 +39,4 @@ void HomePresenter::activate() {
 }
 
 void HomePresenter::deactivate() {
-
 }

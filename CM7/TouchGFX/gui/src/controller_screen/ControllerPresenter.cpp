@@ -13,28 +13,17 @@ ControllerPresenter::ControllerPresenter(ControllerView& v)
 
 }
 
+void ControllerPresenter::displayMessage(char * message){
+	this->view.displayMessage(message);
+}
+
 void ControllerPresenter::activate()
 {
-	//this->view.devices();
 }
 
 void ControllerPresenter::deactivate()
 {
-
 }
 
 void ControllerPresenter::tick() {
-	struct AppMessage xRxedStructure;
-	if (xQueueReceive(xQueueBackendToView, (struct AppMessage*) &xRxedStructure, (TickType_t) 10) == pdPASS) {
-		switch (xRxedStructure.ucMessageID) {
-		case MID_VW_LOG:
-			//this->view.displayMessage(xRxedStructure.content);
-			break;
-		}
-	}
-
-}
-
-void ControllerPresenter::uiToBe(struct AppMessage *message) {
-	xQueueSend(xQueueViewToBackend, (void* ) message, (TickType_t ) 0);
 }

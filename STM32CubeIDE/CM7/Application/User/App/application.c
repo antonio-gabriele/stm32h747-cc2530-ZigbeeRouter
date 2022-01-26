@@ -31,15 +31,15 @@ StaticTimer_t xTimerBuffer;
 ResetReqFormat_t const_hard_rst = { .Type = 0 };
 uint8_t bsum = 0;
 /********************************************************************************/
+void call_C_displayMessage(char *message);
+/********************************************************************************/
 uint8_t app_show(const char *fmt, ...) {
-	struct AppMessage msg;
-	msg.ucMessageID = MID_VW_LOG;
-	memset(msg.content, 0, sizeof(msg.content));
+	char content[64];
 	va_list args;
 	va_start(args, fmt);
-	vsnprintf(msg.content, 256, fmt, args);
+	vsnprintf(content, 256, fmt, args);
 	va_end(args);
-	xQueueSend(xQueueBackendToView, (void* ) &msg, (TickType_t ) 0);
+	call_C_displayMessage(content);
 	return 0;
 }
 
@@ -60,7 +60,7 @@ uint8_t app_reset(Fake_t *devType) {
 		app_show("Errore");
 	}
 	vTaskDelay(4000);
-	sys_cfg.DeviceType = devType;
+	sys_cfg.DeviceType = devType->u8;
 	sys_cfg.NodesCount = 0;
 	cfgWrite();
 	return 0;
@@ -78,6 +78,7 @@ uint8_t app_summary(void * none) {
 		app_show("D:%d/%d, E: %d/%d", summary.nNodesAEOk, summary.nNodes, summary.nEndpointsSDOk, summary.nEndpoints);
 	}
 	bsum = summary.nEndpointsSDOk + summary.nNodesAEOk;
+	return 0;
 }
 
 static int32_t app_register_af(void) {
@@ -122,7 +123,7 @@ void vAppTaskLoop() {
 	if (xQueueReceive(xQueueViewToBackend, (struct AppMessage*) &xRxedStructure, (TickType_t) 10) == pdPASS) {
 		if (xRxedStructure.fn != NULL) {
 			void (*fn)(void*) = xRxedStructure.fn;
-			fn(xRxedStructure.content);
+			fn(xRxedStructure.params);
 		}
 	}
 	//rpcWaitMqClientMsg(10);

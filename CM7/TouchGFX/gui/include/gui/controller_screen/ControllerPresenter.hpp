@@ -24,9 +24,8 @@ public:
      * (ie. made inactive). Teardown functionality can be placed here.
      */
     virtual void deactivate();
-    virtual void uiToBe(struct AppMessage *message);
     virtual void tick();
-
+    virtual void displayMessage(char *);
     virtual ~ControllerPresenter() {};
 
 private:

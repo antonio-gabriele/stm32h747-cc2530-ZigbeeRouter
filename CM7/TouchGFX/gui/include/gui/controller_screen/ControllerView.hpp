@@ -11,6 +11,7 @@ public:
     virtual ~ControllerView() {}
     virtual void setupScreen();
     virtual void tearDownScreen();
+    virtual void displayMessage(char *);
     virtual void deviceScrollListUpdateItem(Device&, int16_t);
 protected:
 };
