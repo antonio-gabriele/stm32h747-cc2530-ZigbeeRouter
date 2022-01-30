@@ -25,6 +25,18 @@
     <Text Id="__SingleUse_SBL7" TypographyId="Default" Alignment="Left" Direction="LTR">
       <Translation Language="GB">&lt;value&gt;</Translation>
     </Text>
+    <Text Id="__SingleUse_A6NR" TypographyId="Default" Alignment="Center" Direction="LTR">
+      <Translation Language="GB">SD</Translation>
+    </Text>
+    <Text Id="__SingleUse_SPDV" TypographyId="Default" Alignment="Center" Direction="LTR">
+      <Translation Language="GB">Load</Translation>
+    </Text>
+    <Text Id="__SingleUse_JP6P" TypographyId="Default" Alignment="Center" Direction="LTR">
+      <Translation Language="GB">Save</Translation>
+    </Text>
+    <Text Id="__SingleUse_WFRR" TypographyId="Default" Alignment="Center" Direction="LTR">
+      <Translation Language="GB">Exit</Translation>
+    </Text>
   </Texts>
   <Typographies>
     <Typography Id="Default" Font="verdana.ttf" Size="20" Bpp="4" FallbackCharacter="?" WildcardCharacterRanges="0x20-0x7E" />

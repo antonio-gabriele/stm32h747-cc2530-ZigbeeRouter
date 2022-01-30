@@ -63,7 +63,6 @@ uint8_t app_reset(Fake_t *devType) {
 	vTaskDelay(4000);
 	sys_cfg.DeviceType = devType->u8;
 	sys_cfg.NodesCount = 0;
-	cfgWrite();
 	return 0;
 }
 
@@ -138,7 +137,6 @@ void vAppTaskLoop() {
 }
 
 void vAppTask(void *pvParameters) {
-	cfgRead();
 	zb_init();
 	znp_if_init();
 	znp_cmd_init();

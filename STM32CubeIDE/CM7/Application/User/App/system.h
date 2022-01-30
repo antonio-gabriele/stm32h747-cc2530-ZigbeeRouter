@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 
-uint8_t cfgRead();
-uint8_t cfgWrite();
+uint8_t cfgRead(void*);
+uint8_t cfgWrite(void*);
 
 #endif /* APPLICATION_USER_APP_CONFIGURATION_H_ */

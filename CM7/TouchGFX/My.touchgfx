@@ -7,8 +7,6 @@
           {
             "Type": "ButtonWithLabel",
             "Name": "btnResetRtr",
-            "X": 45,
-            "Y": 45,
             "Width": 170,
             "Height": 60,
             "Pressed": "__designer\\Blue_Buttons_Round_Edge_small_pressed.png",
@@ -31,8 +29,7 @@
           {
             "Type": "ButtonWithLabel",
             "Name": "btnResetCoo",
-            "X": 45,
-            "Y": 105,
+            "Y": 60,
             "Width": 170,
             "Height": 60,
             "Pressed": "__designer\\Blue_Buttons_Round_Edge_small_pressed.png",
@@ -55,10 +52,10 @@
           {
             "Type": "TextArea",
             "Name": "textArea",
-            "X": 230,
-            "Y": 50,
-            "Width": 520,
-            "Height": 380,
+            "X": 170,
+            "Y": 6,
+            "Width": 624,
+            "Height": 466,
             "TextId": "__SingleUse_1EDP",
             "TextRotation": "0",
             "Color": {
@@ -74,8 +71,7 @@
           {
             "Type": "ButtonWithLabel",
             "Name": "btnStart",
-            "X": 45,
-            "Y": 165,
+            "Y": 120,
             "Width": 170,
             "Height": 60,
             "Pressed": "__designer\\Blue_Buttons_Round_Edge_small_pressed.png",
@@ -98,8 +94,7 @@
           {
             "Type": "ButtonWithLabel",
             "Name": "btnSscan",
-            "X": 45,
-            "Y": 225,
+            "Y": 180,
             "Width": 170,
             "Height": 60,
             "Pressed": "__designer\\Blue_Buttons_Round_Edge_small_pressed.png",
@@ -122,13 +117,35 @@
           {
             "Type": "ButtonWithLabel",
             "Name": "btnSwitch",
-            "X": 45,
-            "Y": 370,
+            "Y": 420,
             "Width": 170,
             "Height": 60,
             "Pressed": "__designer\\Blue_Buttons_Round_Edge_small_pressed.png",
             "Released": "__designer\\Blue_Buttons_Round_Edge_small.png",
             "TextId": "__SingleUse_LL8U",
+            "ReleasedColor": {
+              "Red": 255,
+              "Green": 255,
+              "Blue": 255
+            },
+            "PressedColor": {
+              "Red": 255,
+              "Green": 255,
+              "Blue": 255
+            },
+            "TextRotation": "0",
+            "Style": "Style4",
+            "Clickable": true
+          },
+          {
+            "Type": "ButtonWithLabel",
+            "Name": "btnSD",
+            "Y": 360,
+            "Width": 170,
+            "Height": 60,
+            "Pressed": "__designer\\Blue_Buttons_Round_Edge_small_pressed.png",
+            "Released": "__designer\\Blue_Buttons_Round_Edge_small.png",
+            "TextId": "__SingleUse_A6NR",
             "ReleasedColor": {
               "Red": 255,
               "Green": 255,
@@ -200,6 +217,18 @@
               "ScreenTransitionType": "ScreenTransitionNone",
               "ActionComponent": "Controller"
             }
+          },
+          {
+            "InteractionName": "btnSDClick",
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "btnSD"
+            },
+            "Action": {
+              "Type": "ActionGotoScreen",
+              "ScreenTransitionType": "ScreenTransitionNone",
+              "ActionComponent": "SD"
+            }
           }
         ]
       },
@@ -209,8 +238,7 @@
           {
             "Type": "ButtonWithLabel",
             "Name": "btnSwitch",
-            "X": 45,
-            "Y": 370,
+            "Y": 420,
             "Width": 170,
             "Height": 60,
             "Pressed": "__designer\\Blue_Buttons_Round_Edge_small_pressed.png",
@@ -233,10 +261,10 @@
           {
             "Type": "ScrollList",
             "Name": "deviceScrollList",
-            "X": 230,
-            "Y": 50,
-            "Width": 400,
-            "Height": 380,
+            "X": 170,
+            "Y": 6,
+            "Width": 520,
+            "Height": 468,
             "ItemTemplateName": "Device",
             "NumberofItems": 10,
             "Easing": "Back",
@@ -256,6 +284,116 @@
               "Type": "ActionGotoScreen",
               "ScreenTransitionType": "ScreenTransitionNone",
               "ActionComponent": "Home"
+            }
+          }
+        ]
+      },
+      {
+        "Name": "SD",
+        "Components": [
+          {
+            "Type": "ButtonWithLabel",
+            "Name": "btnLoad",
+            "X": 315,
+            "Y": 210,
+            "Width": 170,
+            "Height": 60,
+            "Pressed": "__designer\\Blue_Buttons_Round_Edge_small_pressed.png",
+            "Released": "__designer\\Blue_Buttons_Round_Edge_small.png",
+            "TextId": "__SingleUse_SPDV",
+            "ReleasedColor": {
+              "Red": 255,
+              "Green": 255,
+              "Blue": 255
+            },
+            "PressedColor": {
+              "Red": 255,
+              "Green": 255,
+              "Blue": 255
+            },
+            "TextRotation": "0",
+            "Style": "Style4"
+          },
+          {
+            "Type": "ButtonWithLabel",
+            "Name": "btnSave",
+            "X": 315,
+            "Y": 150,
+            "Width": 170,
+            "Height": 60,
+            "Pressed": "__designer\\Blue_Buttons_Round_Edge_small_pressed.png",
+            "Released": "__designer\\Blue_Buttons_Round_Edge_small.png",
+            "TextId": "__SingleUse_JP6P",
+            "ReleasedColor": {
+              "Red": 255,
+              "Green": 255,
+              "Blue": 255
+            },
+            "PressedColor": {
+              "Red": 255,
+              "Green": 255,
+              "Blue": 255
+            },
+            "TextRotation": "0",
+            "Style": "Style4"
+          },
+          {
+            "Type": "ButtonWithLabel",
+            "Name": "btnExit",
+            "X": 315,
+            "Y": 270,
+            "Width": 170,
+            "Height": 60,
+            "Pressed": "__designer\\Blue_Buttons_Round_Edge_small_pressed.png",
+            "Released": "__designer\\Blue_Buttons_Round_Edge_small.png",
+            "TextId": "__SingleUse_WFRR",
+            "ReleasedColor": {
+              "Red": 255,
+              "Green": 255,
+              "Blue": 255
+            },
+            "PressedColor": {
+              "Red": 255,
+              "Green": 255,
+              "Blue": 255
+            },
+            "TextRotation": "0",
+            "Style": "Style4"
+          }
+        ],
+        "Interactions": [
+          {
+            "InteractionName": "btnExitClick",
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "btnExit"
+            },
+            "Action": {
+              "Type": "ActionGotoScreen",
+              "ScreenTransitionType": "ScreenTransitionNone",
+              "ActionComponent": "Home"
+            }
+          },
+          {
+            "InteractionName": "btnSaveClick",
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "btnSave"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "btnSaveClick"
+            }
+          },
+          {
+            "InteractionName": "btnLoadClick",
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "btnLoad"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "btnLoadClick"
             }
           }
         ]

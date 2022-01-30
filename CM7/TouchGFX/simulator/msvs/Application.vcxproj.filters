@@ -208,6 +208,18 @@
     <Filter Include="Header Files\gui\containers">
       <UniqueIdentifier>FDA5CEF4-0EFA-925B-5AAE-E0FB29FCEE38</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\gui\sd_screen">
+      <UniqueIdentifier>ACE1AB21-6A0F-D7FB-1848-81D9B5166BFD</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\gui\sd_screen">
+      <UniqueIdentifier>1672DE96-AB4E-17B0-DDF8-8737146FFD35</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\generated\gui_generated\sd_screen">
+      <UniqueIdentifier>02C21770-3DD0-00C2-4952-EE3E5CD52F1C</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\generated\gui_generated\sd_screen">
+      <UniqueIdentifier>8277ACB9-D301-118F-F336-E35BAF9509AA</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(TouchGFXReleasePath)\framework\source\platform\driver\touch\SDL2TouchController.cpp">
@@ -263,6 +275,15 @@
     </ClCompile>
     <ClCompile Include="..\..\generated\gui_generated\src\containers\DeviceBase.cpp">
       <Filter>Source Files\generated\gui_generated\containers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gui\src\sd_screen\SDPresenter.cpp">
+      <Filter>Source Files\gui\sd_screen</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gui\src\sd_screen\SDView.cpp">
+      <Filter>Source Files\gui\sd_screen</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\generated\gui_generated\src\sd_screen\SDViewBase.cpp">
+      <Filter>Source Files\generated\gui_generated\sd_screen</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -729,6 +750,15 @@
     </ClInclude>
     <ClInclude Include="..\..\generated\gui_generated\include\gui_generated\containers\DeviceBase.hpp">
       <Filter>Header Files\generated\gui_generated\containers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gui\include\gui\sd_screen\SDPresenter.hpp">
+      <Filter>Header Files\gui\sd_screen</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gui\include\gui\sd_screen\SDView.hpp">
+      <Filter>Header Files\gui\sd_screen</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\generated\gui_generated\include\gui_generated\sd_screen\SDViewBase.hpp">
+      <Filter>Header Files\generated\gui_generated\sd_screen</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -29,6 +29,9 @@
     <ClCompile Include="..\..\generated\gui_generated\src\controller_screen\ControllerViewBase.cpp"/>
     <ClCompile Include="..\..\gui\src\containers\Device.cpp"/>
     <ClCompile Include="..\..\generated\gui_generated\src\containers\DeviceBase.cpp"/>
+    <ClCompile Include="..\..\gui\src\sd_screen\SDPresenter.cpp"/>
+    <ClCompile Include="..\..\gui\src\sd_screen\SDView.cpp"/>
+    <ClCompile Include="..\..\generated\gui_generated\src\sd_screen\SDViewBase.cpp"/>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ApplicationRoot)\assets\texts\texts.xml"/>
@@ -187,6 +190,9 @@
     <ClInclude Include="..\..\generated\gui_generated\include\gui_generated\controller_screen\ControllerViewBase.hpp"/>
     <ClInclude Include="..\..\gui\include\gui\containers\Device.hpp"/>
     <ClInclude Include="..\..\generated\gui_generated\include\gui_generated\containers\DeviceBase.hpp"/>
+    <ClInclude Include="..\..\gui\include\gui\sd_screen\SDPresenter.hpp"/>
+    <ClInclude Include="..\..\gui\include\gui\sd_screen\SDView.hpp"/>
+    <ClInclude Include="..\..\generated\gui_generated\include\gui_generated\sd_screen\SDViewBase.hpp"/>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="$(ApplicationRoot)\generated\simulator\touchgfx.rc"/>
