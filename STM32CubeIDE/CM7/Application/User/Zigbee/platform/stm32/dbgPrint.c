@@ -78,38 +78,23 @@
  */
 void dbg_print(int print_level, const char *fmt, ...) {
 	static char working_buffer[256];
-
 	if (print_level >= PRINT_LEVEL) {
 		return;
 	}
 	else {
-		// Create vaarg list
 		va_list args;
 		va_start(args, fmt);
-
-		// Write string to buffer
 		vsnprintf(working_buffer, 256, fmt, args);
-
-		// Close vaarg list
 		va_end(args);
-
-		// send data
-		//printf(working_buffer);
+		printf(working_buffer);
 	}
 }
 
 void log_print(const char *fmt, ...) {
 	static char working_buffer[256];
-
 	va_list args;
 	va_start(args, fmt);
-
-	// Write string to buffer
 	vsnprintf(working_buffer, 256, fmt, args);
-
-	// Close vaarg list
 	va_end(args);
-
-	// send data
 	printf(working_buffer);
 }

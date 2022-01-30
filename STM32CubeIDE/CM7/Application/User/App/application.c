@@ -28,6 +28,7 @@ QueueHandle_t xQueueViewToBackend;
 QueueHandle_t xQueueBackendToView;
 TimerHandle_t xTimer;
 StaticTimer_t xTimerBuffer;
+utilGetDeviceInfoFormat_t system;
 ResetReqFormat_t const_hard_rst = { .Type = 0 };
 uint8_t bsum = 0;
 /********************************************************************************/
@@ -66,18 +67,27 @@ uint8_t app_reset(Fake_t *devType) {
 	return 0;
 }
 
-uint8_t app_summary(void * none) {
+uint8_t app_summary(void *none) {
 	Summary_t summary = { 0 };
 	zb_zdo_explore1(&summary);
-	if (summary.nNodesAEOk < summary.nNodes || summary.nEndpointsSDOk < summary.nEndpoints) {
-		xTimerStart(xTimer, 0);
-	}
-	if (bsum < (summary.nEndpointsSDOk + summary.nNodesAEOk)) {
-		void * req = 0;
+	uint8_t thumb = summary.nEndpoints + summary.nEndpointsSDOk + summary.nNodesNameOk + summary.nNodesAEOk + summary.nNodesIEEEOk + summary.nNodesLQOk;
+	//if (summary.nNodesNameOk < summary.nNodes || summary.nEndpointsBindOk < summary.nEndpoints) {
+	xTimerStart(xTimer, 0);
+	//}
+	if (bsum != thumb) {
+		void *req = 0;
 		RUN(cfgWrite, req)
-		app_show("D:%d/%d, E: %d/%d", summary.nNodesAEOk, summary.nNodes, summary.nEndpointsSDOk, summary.nEndpoints);
+		app_show("ND:%d/AE:%d/IE:%d/LQ:%d/ID:%d-EP:%d/SD:%d/BN:%d", //
+				summary.nNodes, //
+				summary.nNodesAEOk, //
+				summary.nNodesIEEEOk, //
+				summary.nNodesLQOk, //
+				summary.nNodesNameOk, //
+				summary.nEndpoints, //
+				summary.nEndpointsSDOk, //
+				summary.nEndpointsBindOk);
 	}
-	bsum = summary.nEndpointsSDOk + summary.nNodesAEOk;
+	bsum = thumb;
 	return 0;
 }
 
@@ -91,14 +101,13 @@ static int32_t app_register_af(void) {
 	return status;
 }
 
-uint8_t app_scanner(void * none) {
-	MgmtLqiReqFormat_t req = { .DstAddr = 0, .StartIndex = 0 };
-	RUN(zdoMgmtLqiReq, req)
+uint8_t app_scanner(void *none) {
+	utilGetDeviceInfo();
 	xTimerStart(xTimer, 0);
 	return 0;
 }
 
-uint8_t app_start_stack(void * none) {
+uint8_t app_start_stack(void *none) {
 	uint8_t status = app_register_af();
 	if (status != MT_RPC_SUCCESS) {
 		printf("Register Af failed");
@@ -126,7 +135,6 @@ void vAppTaskLoop() {
 			fn(xRxedStructure.params);
 		}
 	}
-	//rpcWaitMqClientMsg(10);
 }
 
 void vAppTask(void *pvParameters) {
@@ -142,37 +150,34 @@ void vAppTask(void *pvParameters) {
 		status = sysVersion();
 	} while (status != 0);
 	app_show("System started");
+	Fake_t req;
+	RUN(app_start_stack, req)
 	while (1)
 		vAppTaskLoop();
 }
-/*
-void vPollTask(void *pvParameters) {
-	while (1) {
-		rpcWaitMqClientMsg(10);
-		vTaskDelay(1);
-	}
-}
-*/
+
 void vComTask(void *pvParameters) {
 	while (1) {
 		rpcProcess();
 		rpcWaitMqClientMsg(10);
-		//vTaskDelay(1);
 	}
 }
 
 void vTimerCallback(TimerHandle_t xTimer) {
-	app_summary(NULL);
+	if (system.ieee_addr == 0) {
+		utilGetDeviceInfo();
+	} else {
+		app_summary(NULL);
+	}
 }
 
-uint8_t app_init(void * none) {
+uint8_t app_init(void *none) {
 	rpcInitMq();
 	rpcOpen();
 	xQueueViewToBackend = xQueueCreate(16, sizeof(struct AppMessage));
 	xQueueBackendToView = xQueueCreate(4, sizeof(struct AppMessage));
-	xTimer = xTimerCreateStatic("Timer", pdMS_TO_TICKS(5000), pdFALSE, (void*) 0, vTimerCallback, &xTimerBuffer);
+	xTimer = xTimerCreateStatic("Timer", pdMS_TO_TICKS(2000), pdFALSE, (void*) 0, vTimerCallback, &xTimerBuffer);
 	xTaskCreate(vAppTask, "APP", 1024, NULL, 8, NULL);
-	//xTaskCreate(vPollTask, "POLL", 1024, NULL, 7, NULL);
 	xTaskCreate(vComTask, "COM", 1024, NULL, 6, NULL);
 	return 0;
 }

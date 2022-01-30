@@ -9,11 +9,12 @@ class Device : public DeviceBase
 public:
     Device();
     virtual ~Device() {}
-    virtual void bind(Node_t *);
+    virtual void bind(Tuple1_t*);
     virtual void initialize();
     virtual void btnOnOffClick();
+    virtual void refresh();
 private:
-    Node_t * node;
+    Tuple1_t * tuple;
 protected:
 };
 

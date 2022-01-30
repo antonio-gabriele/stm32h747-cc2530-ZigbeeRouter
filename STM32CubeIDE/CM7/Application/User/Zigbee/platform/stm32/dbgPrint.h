@@ -54,7 +54,7 @@ enum
 	PRINT_LEVEL_VERBOSE
 };
 
-#define PRINT_LEVEL PRINT_LEVEL_INFO_LOWLEVEL
+#define PRINT_LEVEL PRINT_LEVEL_ERROR
 
 //#define dbg_print(lvl, fmt, ...)	do { if (lvl < PRINT_LEVEL) { log_print(fmt, ##__VA_ARGS__); } } while(0)
 

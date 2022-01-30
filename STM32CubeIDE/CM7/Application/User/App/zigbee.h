@@ -7,23 +7,29 @@
 #include <stdint.h>
 #include <mtAf.h>
 #include <application.h>
+#include <mtUtil.h>
 
-#define ZB_OK 0
-#define ZB_KO 1
-uint8_t zb_zdo_explore1(Summary_t * summary);
-uint8_t zb_zdo_explore(Node_t * node, Summary_t * summary);
-uint8_t zb_zdo_state_changed(uint8_t newDevState);
-uint8_t zb_zdo_mgmt_remote_lqi(MgmtLqiRspFormat_t *msg);
-uint8_t zb_zdo_simple_descriptor(SimpleDescRspFormat_t *msg);
-uint8_t zb_zdo_end_device_announce(EndDeviceAnnceIndFormat_t *msg);
-uint8_t zb_zdo_active_endpoint(ActiveEpRspFormat_t *msg);
-uint8_t zb_sys_reset(ResetIndFormat_t *msg);
-uint8_t zb_sys_version(VersionSrspFormat_t *msg);
-uint8_t zb_af_incoming_msg(IncomingMsgFormat_t *msg);
-Node_t* zb_find_node_by_address(uint16_t address);
-Node_t* zb_find_node_by_ieee(uint64_t ieee);
-Endpoint_t* zb_find_endpoint(Node_t *node, uint8_t endpoint);
+#define ZB_OK 0x00
+#define ZB_KO 0xFF
+#define ZB_RE (0xFF-0x04)
 
+uint8_t zb_zdo_explore1(Summary_t*);
+uint8_t zb_zdo_explore(Node_t*, Summary_t*);
+uint8_t zb_zdo_state_changed(uint8_t);
+uint8_t zb_zdo_mgmt_remote_lqi(MgmtLqiRspFormat_t*);
+uint8_t zb_zdo_simple_descriptor(SimpleDescRspFormat_t*);
+uint8_t zb_zdo_end_device_announce(EndDeviceAnnceIndFormat_t*);
+uint8_t zb_zdo_active_endpoint(ActiveEpRspFormat_t*);
+uint8_t zb_sys_reset(ResetIndFormat_t*);
+uint8_t zb_sys_version(VersionSrspFormat_t*);
+uint8_t zb_af_incoming_msg(IncomingMsgFormat_t*);
+uint8_t zb_zdo_ieee_address(IeeeAddrRspFormat_t*);
+uint8_t zb_zdo_bind(BindRspFormat_t*);
+uint8_t pfnUtilGetDeviceInfoCb(utilGetDeviceInfoFormat_t*);
+Node_t* zb_find_node_by_address(uint16_t);
+Node_t* zb_find_node_by_ieee(uint64_t);
+Endpoint_t* zb_find_endpoint(Node_t*, uint8_t);
+Cluster_t* zb_find_cluster(Endpoint_t*, uint16_t);
 void zb_init();
 
 #endif

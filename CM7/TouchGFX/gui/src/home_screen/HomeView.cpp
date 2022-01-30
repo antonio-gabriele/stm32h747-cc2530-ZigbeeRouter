@@ -5,6 +5,9 @@
 
 static struct HomeView *homeView;
 
+static const uint16_t TEXTAREA_SIZE = 8192;
+static touchgfx::Unicode::UnicodeChar textAreaBuffer1[TEXTAREA_SIZE] = { 0 };
+
 extern "C" void call_C_displayMessage(char *message) {
 	if (homeView)
 		homeView->displayMessage(message);
@@ -16,12 +19,13 @@ HomeView::HomeView() {
 
 void HomeView::displayMessage(char *msg) {
 	uint16_t length = strlen(msg);
-	Unicode::UnicodeChar *stop = textAreaBuffer + TEXTAREA_SIZE;
-	while (--stop > (textAreaBuffer + length)) {
+	Unicode::UnicodeChar *stop = textAreaBuffer1 + TEXTAREA_SIZE;
+	while (--stop > (textAreaBuffer1 + length)) {
 		*stop = *(stop - length - 1);
 	}
-	Unicode::strncpy(textAreaBuffer, msg, length);
-	Unicode::strncpy(textAreaBuffer + length, "\n", 1);
+	Unicode::strncpy(textAreaBuffer1, msg, length);
+	Unicode::strncpy(textAreaBuffer1 + length, "\n", 1);
+	Unicode::strncpy(textAreaBuffer, textAreaBuffer1, TEXTAREA_SIZE);
 	flg1 = true;
 }
 
@@ -46,6 +50,8 @@ void HomeView::btnResetRtrClick() {
 void HomeView::setupScreen() {
 	homeView = this;
 	HomeViewBase::setupScreen();
+	Unicode::strncpy(textAreaBuffer, textAreaBuffer1, TEXTAREA_SIZE);
+	this->textArea.invalidate();
 }
 
 void HomeView::tearDownScreen() {

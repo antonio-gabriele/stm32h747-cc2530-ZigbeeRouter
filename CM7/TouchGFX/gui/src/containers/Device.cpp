@@ -8,15 +8,29 @@
 #include <queue.h>
 
 extern QueueHandle_t xQueueViewToBackend;
+extern uint8_t af_counter;
 
 Device::Device() {
 
 }
 
+void Device::refresh(){
+	char caption[64] = { 0 };
+	char *mn = (char*) tuple->Node->ManufacturerName;
+	//char *mi = (char*) tuple->Node->ModelIdentifier;
+	uint8_t activeState = tuple->Cluster->A0;
+	sprintf(caption, "%s %04X.%d (%d)", mn, tuple->Node->Address, tuple->Endpoint->Endpoint, activeState);
+	uint8_t length = strlen(caption) > BTNONOFFCAPTION_SIZE ? BTNONOFFCAPTION_SIZE : strlen(caption);
+	Unicode::strncpy(this->btnOnOffCaptionBuffer, caption, length);
+	this->btnOnOff.forceState(activeState);
+	this->btnOnOffCaption.invalidate();
+}
+
 void Device::btnOnOffClick() {
+	uint8_t activeState = this->btnOnOff.getState();
 	DataRequestFormat_t req;
 	req.ClusterID = 6;
-	req.DstAddr = this->node->Address;
+	req.DstAddr = this->tuple->Node->Address;
 	req.DstEndpoint = 1;
 	req.SrcEndpoint = 1;
 	req.Len = 3;
@@ -24,22 +38,14 @@ void Device::btnOnOffClick() {
 	req.Radius = 0;
 	req.TransID = 1;
 	req.Data[0] = 1;
-	req.Data[1] = 0xFF;
-	req.Data[2] = 2; //CmdId
-	RUN(afDataRequest, req);
+	req.Data[1] = (af_counter++)%255;
+	req.Data[2] = activeState; //CmdId
+	RUNNOW(afDataRequest, req);
 }
 
-void Device::bind(Node_t *node) {
-	this->node = node;
-	char caption[64] = { 0 };
-	char *mn = (char*) node->ManufacturerName;
-	printf(mn);
-	char *mi = (char*) node->ModelIdentifier;
-	printf(mi);
-	sprintf(caption, "%s %04X", mi, node->Address);
-	uint8_t length = strlen(caption) > BTNONOFFCAPTION_SIZE ? BTNONOFFCAPTION_SIZE : strlen(caption);
-	Unicode::strncpy(this->btnOnOffCaptionBuffer, caption, length);
-	this->btnOnOffCaption.invalidate();
+void Device::bind(Tuple1_t *tuple) {
+	this->tuple = tuple;
+	this->refresh();
 }
 
 void Device::initialize() {
