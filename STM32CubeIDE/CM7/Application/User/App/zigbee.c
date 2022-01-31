@@ -139,8 +139,8 @@ uint8_t zb_zdo_ieee_address(IeeeAddrRspFormat_t *msg) {
 	Node_t *node = zb_find_node_by_address(msg->NwkAddr);
 	node->IEEE = msg->IEEEAddr;
 	node->IEEERetry = ZB_OK;
-	MgmtLqiReqFormat_t req = { .DstAddr = msg->NwkAddr, .StartIndex = 0 };
-	RUN(zdoMgmtLqiReq, req)
+	Summary_t summary;
+	zb_zdo_explore(node, &summary);
 	return MT_RPC_SUCCESS;
 }
 
@@ -159,8 +159,9 @@ uint8_t zb_zdo_explore(Node_t *node, Summary_t *summary) {
 		ActiveEpReqFormat_t req = { .DstAddr = node->Address, .NwkAddrOfInterest = node->Address };
 		RUN(zdoActiveEpReq, req)
 		return MT_RPC_SUCCESS;
+	} else {
+		summary->nNodesAEOk++;
 	}
-	summary->nNodesAEOk++;
 	if (node->IEEE == 0 && node->IEEERetry != ZB_OK && node->IEEERetry != ZB_KO) {
 		node->IEEERetry++;
 		IeeeAddrReqFormat_t req = { .ShortAddr = node->Address, .ReqType = 0, .StartIndex = 0 };
@@ -173,8 +174,9 @@ uint8_t zb_zdo_explore(Node_t *node, Summary_t *summary) {
 		MgmtLqiReqFormat_t req = { .DstAddr = node->Address, .StartIndex = 0 };
 		RUN(zdoMgmtLqiReq, req)
 		return MT_RPC_SUCCESS;
+	} else {
+		summary->nNodesLQOk++;
 	}
-	summary->nNodesLQOk++;
 	if ((node->ManufacturerName[0] == 0x00 || node->ModelIdentifier[0] == 0x00) && node->NameRetry != ZB_OK && node->NameRetry != ZB_KO) {
 		node->NameRetry++;
 		DataRequestFormat_t req = { .ClusterID = 0, .DstAddr = node->Address, .DstEndpoint = 1, .SrcEndpoint = 1, .Len = 7, .Options = 0, .Radius = 0, .TransID = 1 };
@@ -187,19 +189,22 @@ uint8_t zb_zdo_explore(Node_t *node, Summary_t *summary) {
 		req.Data[6] = 0x00;
 		RUN(afDataRequest, req)
 		return MT_RPC_SUCCESS;
+	} else {
+		summary->nNodesNameOk++;
 	}
-	summary->nNodesNameOk++;
-	/*
+
 	uint8_t iEndpoint;
 	summary->nEndpoints += node->EndpointCount;
 	for (iEndpoint = 0; iEndpoint < node->EndpointCount; iEndpoint++) {
 		Endpoint_t *endpoint = &node->Endpoints[iEndpoint];
 		if (endpoint->SimpleDescriptorRetry != ZB_OK && endpoint->SimpleDescriptorRetry != ZB_KO) {
+			endpoint->SimpleDescriptorRetry++;
 			SimpleDescReqFormat_t req = { .DstAddr = node->Address, .NwkAddrOfInterest = node->Address, .Endpoint = endpoint->Endpoint };
 			RUN(zdoSimpleDescReq, req)
 		} else {
 			summary->nEndpointsSDOk++;
 		}
+		/*
 		uint8_t iCluster;
 		for (iCluster = 0; iCluster < endpoint->InClusterCount; iCluster++) {
 			Cluster_t *cluster = &(endpoint->InClusters[iCluster]);
@@ -210,9 +215,10 @@ uint8_t zb_zdo_explore(Node_t *node, Summary_t *summary) {
 				summary->nEndpointsBindOk++;
 			}
 		}
+		*/
 	}
-	*/
-	return 0;
+
+	return MT_RPC_SUCCESS;
 }
 
 uint8_t zb_zdo_end_device_announce(EndDeviceAnnceIndFormat_t *msg) {
@@ -233,8 +239,8 @@ uint8_t zb_zdo_end_device_announce(EndDeviceAnnceIndFormat_t *msg) {
 		node->Address = msg->NwkAddr;
 		node->IEEE = msg->IEEEAddr;
 	}
-	MgmtLqiReqFormat_t req = { .DstAddr = msg->NwkAddr, .StartIndex = 0 };
-	RUN(zdoMgmtLqiReq, req)
+	Summary_t summary;
+	zb_zdo_explore(node, &summary);
 	return MT_RPC_SUCCESS;
 }
 
@@ -250,11 +256,6 @@ uint8_t zb_zdo_mgmt_remote_lqi(MgmtLqiRspFormat_t *msg) {
 	if (msg->StartIndex + msg->NeighborLqiListCount == msg->NeighborTableEntries) {
 		Node_t *node1 = zb_find_node_by_address(msg->SrcAddr);
 		node1->LqiRetry = ZB_OK;
-		if (node1->ActiveEndpointRetry != ZB_OK && node1->ActiveEndpointRetry != ZB_KO) {
-			node1->ActiveEndpointRetry++;
-			ActiveEpReqFormat_t req = { .DstAddr = msg->SrcAddr, .NwkAddrOfInterest = msg->SrcAddr };
-			RUNNOW(zdoActiveEpReq, req)
-		}
 	}
 	uint32_t iNeighbor = 0;
 	uint16_t address;
@@ -274,8 +275,8 @@ uint8_t zb_zdo_mgmt_remote_lqi(MgmtLqiRspFormat_t *msg) {
 			node->IEEE = 0;
 			node->ManufacturerName[0] = 0;
 			node->ModelIdentifier[0] = 0;
-			IeeeAddrReqFormat_t req = { .ShortAddr = address, .ReqType = 0, .StartIndex = 0 };
-			RUN(zdoIeeeAddrReq, req)
+			Summary_t summary;
+			zb_zdo_explore(node, &summary);
 		}
 	}
 	return msg->Status;
@@ -283,7 +284,6 @@ uint8_t zb_zdo_mgmt_remote_lqi(MgmtLqiRspFormat_t *msg) {
 
 uint8_t zb_zdo_simple_descriptor(SimpleDescRspFormat_t *msg) {
 	xTimerReset(xTimer, 0);
-	printf("SDES: %04X.%d -> %d", msg->SrcAddr, msg->Endpoint, msg->Status);
 	Node_t *node = zb_find_node_by_address(msg->NwkAddr);
 	if (node == NULL) {
 		return MT_RPC_SUCCESS;
@@ -292,24 +292,14 @@ uint8_t zb_zdo_simple_descriptor(SimpleDescRspFormat_t *msg) {
 	if (endpoint == NULL) {
 		return MT_RPC_SUCCESS;
 	}
-	if (msg->Status != MT_RPC_SUCCESS) {
+	if (msg->Endpoint == 0) {
 		endpoint->SimpleDescriptorRetry = ZB_KO;
 		return msg->Status;
 	}
+	printf("SDES: %04X.%d -> %d", msg->SrcAddr, msg->Endpoint, msg->Status);
 	endpoint->SimpleDescriptorRetry = ZB_OK;
 	endpoint->InClusterCount = msg->NumInClusters;
 	endpoint->OutClusterCount = msg->NumOutClusters;
-	if (endpoint->Endpoint == 1) {
-		DataRequestFormat_t req = { .ClusterID = 0, .DstAddr = node->Address, .DstEndpoint = 1, .SrcEndpoint = 1, .Len = 7, .Options = 0, .Radius = 0, .TransID = 1 };
-		req.Data[0] = 0x00;
-		req.Data[1] = (af_counter++) % 255;
-		req.Data[2] = 0x00;
-		req.Data[3] = 0x05;
-		req.Data[4] = 0x00;
-		req.Data[5] = 0x04;
-		req.Data[6] = 0x00;
-		RUN(afDataRequest, req)
-	}
 	uint32_t i;
 	for (i = 0; i < msg->NumInClusters; i++) {
 		printf(" I%d", msg->InClusterList[i]);
@@ -346,10 +336,10 @@ uint8_t zb_zdo_active_endpoint(ActiveEpRspFormat_t *msg) {
 	for (i = 0; i < msg->ActiveEPCount; i++) {
 		uint8_t endpoint = msg->ActiveEPList[i];
 		node->Endpoints[i].Endpoint = endpoint;
-		printf(" %d", endpoint);
 		node->Endpoints[i].SimpleDescriptorRetry = ZB_RE;
-		SimpleDescReqFormat_t req = { .DstAddr = msg->NwkAddr, .NwkAddrOfInterest = msg->NwkAddr, .Endpoint = endpoint };
-		RUN(zdoSimpleDescReq, req)
+		printf(" %d", endpoint);
+		Summary_t summary;
+		zb_zdo_explore(node, &summary);
 	}
 	printf("\n");
 	return msg->Status;
