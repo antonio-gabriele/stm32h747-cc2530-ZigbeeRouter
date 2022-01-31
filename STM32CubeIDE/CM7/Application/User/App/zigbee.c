@@ -62,8 +62,6 @@ extern utilGetDeviceInfoFormat_t system;
 uint8_t pfnUtilGetDeviceInfoCb(utilGetDeviceInfoFormat_t *msg) {
 	memcpy(&system, msg, sizeof(utilGetDeviceInfoFormat_t));
 	app_show("I'm: %04X.%llu", msg->short_addr, msg->ieee_addr);
-	MgmtLqiReqFormat_t req = { .DstAddr = 0, .StartIndex = 0 };
-	RUN(zdoMgmtLqiReq, req)
 	return MT_RPC_SUCCESS;
 }
 
@@ -133,10 +131,10 @@ uint8_t zb_zdo_explore1(Summary_t *summary) {
 }
 
 uint8_t zb_zdo_ieee_address(IeeeAddrRspFormat_t *msg) {
+	xTimerReset(xTimer, 0);
 	if (msg->Status != MT_RPC_SUCCESS) {
 		return msg->Status;
 	}
-	xTimerReset(xTimer, 0);
 	printf("IEEE: %04X -> %llu \n", msg->NwkAddr, msg->IEEEAddr);
 	Node_t *node = zb_find_node_by_address(msg->NwkAddr);
 	node->IEEE = msg->IEEEAddr;
@@ -164,18 +162,21 @@ uint8_t zb_zdo_explore(Node_t *node, Summary_t *summary) {
 	}
 	summary->nNodesAEOk++;
 	if (node->IEEE == 0 && node->IEEERetry != ZB_OK && node->IEEERetry != ZB_KO) {
+		node->IEEERetry++;
 		IeeeAddrReqFormat_t req = { .ShortAddr = node->Address, .ReqType = 0, .StartIndex = 0 };
 		RUN(zdoIeeeAddrReq, req)
 		return MT_RPC_SUCCESS;
 	}
 	summary->nNodesIEEEOk++;
 	if (node->LqiRetry != ZB_OK && node->LqiRetry != ZB_KO) {
+		node->LqiRetry++;
 		MgmtLqiReqFormat_t req = { .DstAddr = node->Address, .StartIndex = 0 };
 		RUN(zdoMgmtLqiReq, req)
 		return MT_RPC_SUCCESS;
 	}
 	summary->nNodesLQOk++;
 	if ((node->ManufacturerName[0] == 0x00 || node->ModelIdentifier[0] == 0x00) && node->NameRetry != ZB_OK && node->NameRetry != ZB_KO) {
+		node->NameRetry++;
 		DataRequestFormat_t req = { .ClusterID = 0, .DstAddr = node->Address, .DstEndpoint = 1, .SrcEndpoint = 1, .Len = 7, .Options = 0, .Radius = 0, .TransID = 1 };
 		req.Data[0] = 0; //ZCL->1
 		req.Data[1] = (af_counter++) % 255;
@@ -188,6 +189,7 @@ uint8_t zb_zdo_explore(Node_t *node, Summary_t *summary) {
 		return MT_RPC_SUCCESS;
 	}
 	summary->nNodesNameOk++;
+	/*
 	uint8_t iEndpoint;
 	summary->nEndpoints += node->EndpointCount;
 	for (iEndpoint = 0; iEndpoint < node->EndpointCount; iEndpoint++) {
@@ -209,6 +211,7 @@ uint8_t zb_zdo_explore(Node_t *node, Summary_t *summary) {
 			}
 		}
 	}
+	*/
 	return 0;
 }
 
@@ -236,10 +239,10 @@ uint8_t zb_zdo_end_device_announce(EndDeviceAnnceIndFormat_t *msg) {
 }
 
 uint8_t zb_zdo_mgmt_remote_lqi(MgmtLqiRspFormat_t *msg) {
+	xTimerReset(xTimer, 0);
 	if (msg->Status != MT_RPC_SUCCESS) {
 		return msg->Status;
 	}
-	xTimerReset(xTimer, 0);
 	if (msg->StartIndex + msg->NeighborLqiListCount < msg->NeighborTableEntries) {
 		MgmtLqiReqFormat_t req = { .DstAddr = msg->SrcAddr, .StartIndex = msg->StartIndex + msg->NeighborLqiListCount };
 		RUN(zdoMgmtLqiReq, req)
@@ -279,13 +282,20 @@ uint8_t zb_zdo_mgmt_remote_lqi(MgmtLqiRspFormat_t *msg) {
 }
 
 uint8_t zb_zdo_simple_descriptor(SimpleDescRspFormat_t *msg) {
+	xTimerReset(xTimer, 0);
 	printf("SDES: %04X.%d -> %d", msg->SrcAddr, msg->Endpoint, msg->Status);
+	Node_t *node = zb_find_node_by_address(msg->NwkAddr);
+	if (node == NULL) {
+		return MT_RPC_SUCCESS;
+	}
+	Endpoint_t *endpoint = zb_find_endpoint(node, msg->Endpoint);
+	if (endpoint == NULL) {
+		return MT_RPC_SUCCESS;
+	}
 	if (msg->Status != MT_RPC_SUCCESS) {
+		endpoint->SimpleDescriptorRetry = ZB_KO;
 		return msg->Status;
 	}
-	xTimerReset(xTimer, 0);
-	Node_t *node = zb_find_node_by_address(msg->NwkAddr);
-	Endpoint_t *endpoint = zb_find_endpoint(node, msg->Endpoint);
 	endpoint->SimpleDescriptorRetry = ZB_OK;
 	endpoint->InClusterCount = msg->NumInClusters;
 	endpoint->OutClusterCount = msg->NumOutClusters;
@@ -324,11 +334,11 @@ uint8_t zb_zdo_simple_descriptor(SimpleDescRspFormat_t *msg) {
 }
 
 uint8_t zb_zdo_active_endpoint(ActiveEpRspFormat_t *msg) {
+	xTimerReset(xTimer, 0);
 	printf("AEND: %04X -> %d", msg->SrcAddr, msg->Status);
 	if (msg->Status != MT_RPC_SUCCESS) {
 		return msg->Status;
 	}
-	xTimerReset(xTimer, 0);
 	Node_t *node = zb_find_node_by_address(msg->SrcAddr);
 	node->ActiveEndpointRetry = ZB_OK;
 	node->EndpointCount = msg->ActiveEPCount;
@@ -403,12 +413,12 @@ uint8_t zb_af_incoming_msg_cmd01(IncomingMsgFormat_t *msg) {
 	return MT_RPC_SUCCESS;
 }
 uint8_t zb_af_incoming_msg(IncomingMsgFormat_t *msg) {
+	xTimerReset(xTimer, 0);
 	switch (msg->Data[2]) {
 	case 0x01:
 		zb_af_incoming_msg_cmd01(msg);
 		break;
 	}
-	xTimerReset(xTimer, 0);
 	return MT_RPC_SUCCESS;
 }
 

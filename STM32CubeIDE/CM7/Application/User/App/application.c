@@ -67,24 +67,23 @@ uint8_t app_reset(Fake_t *devType) {
 }
 
 uint8_t app_summary(void *none) {
+	xTimerReset(xTimer, 0);
 	Summary_t summary = { 0 };
 	zb_zdo_explore1(&summary);
 	uint8_t thumb = summary.nEndpoints + summary.nEndpointsSDOk + summary.nNodesNameOk + summary.nNodesAEOk + summary.nNodesIEEEOk + summary.nNodesLQOk;
 	//if (summary.nNodesNameOk < summary.nNodes || summary.nEndpointsBindOk < summary.nEndpoints) {
-	xTimerStart(xTimer, 0);
+	//xTimerStart(xTimer, 0);
 	//}
 	if (bsum != thumb) {
-		void *req = 0;
-		RUN(cfgWrite, req)
-		app_show("ND:%d/AE:%d/IE:%d/LQ:%d/ID:%d-EP:%d/SD:%d/BN:%d", //
-				summary.nNodes, //
-				summary.nNodesAEOk, //
-				summary.nNodesIEEEOk, //
-				summary.nNodesLQOk, //
-				summary.nNodesNameOk, //
-				summary.nEndpoints, //
-				summary.nEndpointsSDOk, //
-				summary.nEndpointsBindOk);
+		 app_show("ND:%d/AE:%d/IE:%d/LQ:%d/ID:%d-EP:%d/SD:%d/BN:%d", //
+		 summary.nNodes, //
+		 summary.nNodesAEOk, //
+		 summary.nNodesIEEEOk, //
+		 summary.nNodesLQOk, //
+		 summary.nNodesNameOk, //
+		 summary.nEndpoints, //
+		 summary.nEndpointsSDOk, //
+		 summary.nEndpointsBindOk);
 	}
 	bsum = thumb;
 	return 0;
@@ -101,9 +100,10 @@ static int32_t app_register_af(void) {
 }
 
 uint8_t app_scanner(void *none) {
-	utilGetDeviceInfo();
-	xTimerStart(xTimer, 0);
-	return 0;
+	xTimerReset(xTimer, 0);
+	MgmtLqiReqFormat_t req = { .DstAddr = 0, .StartIndex = 0 };
+	RUN(zdoMgmtLqiReq, req)
+	return MT_RPC_SUCCESS;
 }
 
 uint8_t app_start_stack(void *none) {
@@ -123,6 +123,9 @@ uint8_t app_start_stack(void *none) {
 		app_show("Start failed");
 		status = -1;
 	}
+	do {
+		utilGetDeviceInfo();
+	} while (system.ieee_addr == 0);
 	return status;
 }
 
@@ -162,11 +165,7 @@ void vComTask(void *pvParameters) {
 }
 
 void vTimerCallback(TimerHandle_t xTimer) {
-	if (system.ieee_addr == 0) {
-		utilGetDeviceInfo();
-	} else {
-		app_summary(NULL);
-	}
+	app_summary(NULL);
 }
 
 uint8_t app_init(void *none) {
@@ -174,7 +173,7 @@ uint8_t app_init(void *none) {
 	rpcOpen();
 	xQueueViewToBackend = xQueueCreate(16, sizeof(struct AppMessage));
 	xQueueBackendToView = xQueueCreate(4, sizeof(struct AppMessage));
-	xTimer = xTimerCreateStatic("Timer", pdMS_TO_TICKS(2000), pdFALSE, (void*) 0, vTimerCallback, &xTimerBuffer);
+	xTimer = xTimerCreateStatic("Timer", pdMS_TO_TICKS(4000), pdFALSE, (void*) 0, vTimerCallback, &xTimerBuffer);
 	xTaskCreate(vAppTask, "APP", 1024, NULL, 8, NULL);
 	xTaskCreate(vComTask, "COM", 1024, NULL, 6, NULL);
 	return 0;
