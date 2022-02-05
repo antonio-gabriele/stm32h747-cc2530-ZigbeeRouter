@@ -288,11 +288,13 @@ uint8_t zbCount(Summary_t *summary) {
 			if (endpoint->SimpleDescriptorRetry != ZB_OK) {
 				break;
 			}
-			if (endpoint->C06BindRetry == ZB_OK) {
-				summary->nEndpointsBindOk++;
-			}
-			if (endpoint->C06ValueRetry == ZB_OK) {
-				summary->nEndpointsValueOk++;
+			if (endpoint->C06Exists == ZB_OK) {
+				if (endpoint->C06BindRetry == ZB_OK) {
+					summary->nEndpointsBindOk++;
+				}
+				if (endpoint->C06ValueRetry == ZB_OK) {
+					summary->nEndpointsValueOk++;
+				}
 			}
 		}
 	}
@@ -402,23 +404,22 @@ uint8_t zbRepairNode(Node_t *node, bool reset) {
 		if(endpoint->SimpleDescriptorRetry != ZB_OK){
 			break;
 		}
-		if(endpoint->C06Exists != ZB_OK){
-			break;
-		}
-		if (endpoint->C06ValueRetry != ZB_OK && endpoint->C06ValueRetry != ZB_KO) {
-			endpoint->C06ValueRetry++;
-			DataRequestFormat_t req = { .ClusterID = 0x06, .DstAddr = node->Address, .DstEndpoint = endpoint->Endpoint, .SrcEndpoint = 1, .Len = 5, .Options = 0, .Radius = 0, .TransID = 1 };
-			req.Data[0] = 0x00;
-			req.Data[1] = (af_counter++) % 255;
-			req.Data[2] = 0x00;
-			req.Data[3] = 0x00;
-			req.Data[4] = 0x00;
-			RUN(afDataRequest, req)
-		}
-		if (endpoint->C06BindRetry != ZB_OK && endpoint->C06BindRetry != ZB_KO) {
-			endpoint->C06BindRetry++;
-			BindReqFormat_t req = { .ClusterID = 0x06, .DstAddr = system.short_addr, .DstEndpoint = 1, .SrcEndpoint = endpoint->Endpoint, .SrcAddress = node->Address };
-			RUN(zdoBindReq, req)
+		if(endpoint->C06Exists == ZB_OK){
+			if (endpoint->C06ValueRetry != ZB_OK && endpoint->C06ValueRetry != ZB_KO) {
+				endpoint->C06ValueRetry++;
+				DataRequestFormat_t req = { .ClusterID = 0x06, .DstAddr = node->Address, .DstEndpoint = endpoint->Endpoint, .SrcEndpoint = 1, .Len = 5, .Options = 0, .Radius = 0, .TransID = 1 };
+				req.Data[0] = 0x00;
+				req.Data[1] = (af_counter++) % 255;
+				req.Data[2] = 0x00;
+				req.Data[3] = 0x00;
+				req.Data[4] = 0x00;
+				RUN(afDataRequest, req)
+			}
+			if (endpoint->C06BindRetry != ZB_OK && endpoint->C06BindRetry != ZB_KO) {
+				endpoint->C06BindRetry++;
+				BindReqFormat_t req = { .ClusterID = 0x06, .DstAddr = system.short_addr, .DstEndpoint = 1, .SrcEndpoint = endpoint->Endpoint, .SrcAddress = node->Address };
+				RUN(zdoBindReq, req)
+			}
 		}
 	}
 	return MT_RPC_SUCCESS;
