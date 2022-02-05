@@ -5,6 +5,7 @@
 #include <mtSys.h>
 #include <mtZdo.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <mtAf.h>
 #include <application.h>
 #include <mtUtil.h>
@@ -18,7 +19,7 @@ uint8_t zbStartScan(Fake_t*);
 /********************************************************************************/
 /********************************************************************************/
 uint8_t zbRepair(Fake_t*);
-uint8_t zbRepairNode(Node_t*);
+uint8_t zbRepairNode(Node_t*, bool);
 uint8_t zbRepairNodeEndpoint(Node_t*, Endpoint_t*);
 uint8_t zbCount(Summary_t*);
 /********************************************************************************/

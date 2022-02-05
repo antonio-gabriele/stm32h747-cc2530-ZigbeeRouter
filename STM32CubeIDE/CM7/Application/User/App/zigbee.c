@@ -3,6 +3,7 @@
 #include "cmsis_os.h"
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 #include <timers.h>
 #include <queue.h>
@@ -11,8 +12,6 @@
 extern Configuration_t sys_cfg;
 extern TimerHandle_t xTimer;
 extern QueueHandle_t xQueue;
-/********************************************************************************/
-#define BREAK if(maxOp-- == 0) return MT_RPC_SUCCESS;
 /********************************************************************************/
 devStates_t zb_device_state = DEV_HOLD;
 mtUtilCb_t mtUtilCb = { .pfnUtilGetDeviceInfoCb_t = pfnUtilGetDeviceInfoCb };
@@ -89,7 +88,7 @@ uint8_t mtZdoActiveEpRspCb(ActiveEpRspFormat_t *msg) {
 	}
 	Node_t *node = zbFindNodeByAddress(msg->NwkAddr);
 	if (node->ActiveEndpointRetry == ZB_OK) {
-		zbRepairNode(node);
+		zbRepairNode(node, true);
 		return MT_RPC_SUCCESS;
 	}
 	printf("AEND: %04X -> %d", msg->NwkAddr, msg->Status);
@@ -103,7 +102,7 @@ uint8_t mtZdoActiveEpRspCb(ActiveEpRspFormat_t *msg) {
 		printf(" %d", endpoint);
 	}
 	printf("\n");
-	zbRepairNode(node);
+	zbRepairNode(node, true);
 	return msg->Status;
 }
 
@@ -126,7 +125,7 @@ uint8_t mtZdoEndDeviceAnnceIndCb(EndDeviceAnnceIndFormat_t *msg) {
 		node->Address = msg->NwkAddr;
 		node->IEEE = msg->IEEEAddr;
 	}
-	zbRepairNode(node);
+	zbRepairNode(node, true);
 	return MT_RPC_SUCCESS;
 }
 uint8_t mtZdoIeeeAddrRspCb(IeeeAddrRspFormat_t *msg) {
@@ -138,7 +137,7 @@ uint8_t mtZdoIeeeAddrRspCb(IeeeAddrRspFormat_t *msg) {
 	printf("IEEE: %04X -> %llu \n", msg->NwkAddr, msg->IEEEAddr);
 	node->IEEE = msg->IEEEAddr;
 	node->IEEERetry = ZB_OK;
-	zbRepairNode(node);
+	zbRepairNode(node, true);
 	return MT_RPC_SUCCESS;
 }
 
@@ -154,7 +153,7 @@ uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t *msg) {
 	if (msg->StartIndex + msg->NeighborLqiListCount == msg->NeighborTableEntries) {
 		Node_t *node = zbFindNodeByAddress(msg->SrcAddr);
 		node->LqiRetry = ZB_OK;
-		zbRepairNode(node);
+		zbRepairNode(node, true);
 	}
 	uint32_t iNeighbor = 0;
 	uint16_t address;
@@ -174,7 +173,7 @@ uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t *msg) {
 			node->IEEE = 0;
 			node->ManufacturerName[0] = 0;
 			node->ModelIdentifier[0] = 0;
-			zbRepairNode(node);
+			zbRepairNode(node, true);
 		}
 	}
 	return msg->Status;
@@ -319,7 +318,23 @@ uint8_t zbStartScan(Fake_t *f) {
 	return MT_RPC_SUCCESS;
 }
 
-uint8_t zbRepairNode(Node_t *node) {
+uint8_t zbRepairNode(Node_t *node, bool reset) {
+	uint8_t iEndpoint;
+	if (reset) {
+		if (node->LqiRetry == ZB_KO)
+			node->LqiRetry = ZB_RE;
+		if (node->IEEERetry == ZB_KO)
+			node->IEEERetry = ZB_RE;
+		if (node->ActiveEndpointRetry == ZB_KO)
+			node->ActiveEndpointRetry = ZB_RE;
+		if (node->NameRetry == ZB_KO)
+			node->NameRetry = ZB_RE;
+		for (iEndpoint = 0; iEndpoint < node->EndpointCount; iEndpoint++) {
+			Endpoint_t *endpoint = &node->Endpoints[iEndpoint];
+			if (endpoint->SimpleDescriptorRetry == ZB_KO)
+				endpoint->SimpleDescriptorRetry = ZB_RE;
+		}
+	}
 	if (node->LqiRetry != ZB_OK && node->LqiRetry != ZB_KO) {
 		node->LqiRetry++;
 		MgmtLqiReqFormat_t req = { .DstAddr = node->Address, .StartIndex = 0 };
@@ -330,7 +345,7 @@ uint8_t zbRepairNode(Node_t *node) {
 		IeeeAddrReqFormat_t req = { .ShortAddr = node->Address, .ReqType = 0, .StartIndex = 0 };
 		RUN(zdoIeeeAddrReq, req)
 	}
-	if(node->IEEERetry != ZB_OK){
+	if (node->IEEERetry != ZB_OK) {
 		return MT_RPC_SUCCESS;
 	}
 	if (node->ActiveEndpointRetry != ZB_OK && node->ActiveEndpointRetry != ZB_KO) {
@@ -350,10 +365,9 @@ uint8_t zbRepairNode(Node_t *node) {
 		req.Data[6] = 0x00;
 		RUN(afDataRequest, req)
 	}
-	if(node->ActiveEndpointRetry != ZB_OK){
+	if (node->ActiveEndpointRetry != ZB_OK) {
 		return MT_RPC_SUCCESS;
 	}
-	uint8_t iEndpoint;
 	for (iEndpoint = 0; iEndpoint < node->EndpointCount; iEndpoint++) {
 		Endpoint_t *endpoint = &node->Endpoints[iEndpoint];
 		if (endpoint->SimpleDescriptorRetry != ZB_OK && endpoint->SimpleDescriptorRetry != ZB_KO) {
@@ -376,11 +390,15 @@ uint8_t zbRepairNode(Node_t *node) {
 	}
 	return MT_RPC_SUCCESS;
 }
+
+static uint8_t retry = 0;
+
 uint8_t zbRepair(Fake_t *f) {
 	uint8_t iNode;
+	bool reset = ((retry++) % 30) == 0;
 	for (iNode = 0; iNode < sys_cfg.NodesCount; iNode++) {
 		Node_t *node = &sys_cfg.Nodes[iNode];
-		zbRepairNode(node);
+		zbRepairNode(node, reset);
 	}
 	return MT_RPC_SUCCESS;
 }
@@ -426,7 +444,7 @@ uint8_t zb_zdo_simple_descriptor(SimpleDescRspFormat_t *msg) {
 		endpoint->OutClusters[i].Cluster = msg->OutClusterList[i];
 	}
 	printf("\n");
-	zbRepairNode(node);
+	zbRepairNode(node, true);
 	return msg->Status;
 }
 
