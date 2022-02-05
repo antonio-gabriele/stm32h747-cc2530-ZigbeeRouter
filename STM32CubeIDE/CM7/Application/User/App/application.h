@@ -86,7 +86,7 @@ struct AppMessage {
 };
 
 uint8_t app_scanner(void *none);
-uint8_t app_start_stack(void *none);
+uint8_t appStartStack(void *none);
 uint8_t app_init(void *none);
 uint8_t app_reset(Fake_t *devType);
 uint8_t app_summary(void *none);

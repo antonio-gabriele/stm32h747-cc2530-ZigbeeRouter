@@ -31,6 +31,7 @@ StaticTimer_t xTimerBuffer;
 utilGetDeviceInfoFormat_t system;
 ResetReqFormat_t const_hard_rst = { .Type = 0 };
 uint8_t bsum = 0;
+uint8_t machineState = 0;
 /********************************************************************************/
 void call_C_displayMessage(char *message);
 /********************************************************************************/
@@ -106,12 +107,8 @@ uint8_t app_scanner(void *none) {
 	return MT_RPC_SUCCESS;
 }
 
-uint8_t app_start_stack(void *none) {
+uint8_t appStartStack(void *none) {
 	uint8_t status = app_register_af();
-	if (status != MT_RPC_SUCCESS) {
-		printf("Register Af failed");
-		return 1;
-	}
 	status = zdoInit();
 	if (status == NEW_NETWORK) {
 		app_show("Start new network");
@@ -123,10 +120,10 @@ uint8_t app_start_stack(void *none) {
 		app_show("Start failed");
 		status = -1;
 	}
-	do {
-		utilGetDeviceInfo();
-	} while (system.ieee_addr == 0);
-	return status;
+	machineState = 2;
+	Fake_t req;
+	RUN(utilGetDeviceInfo, req)
+	return MT_RPC_SUCCESS;
 }
 
 void vAppTaskLoop() {
@@ -144,15 +141,8 @@ void vAppTask(void *pvParameters) {
 	znp_if_init();
 	znp_cmd_init();
 	vTaskDelay(1000);
-	uint8_t status = 0;
-	status = sysResetReq(&const_hard_rst);
-	do {
-		vTaskDelay(1000);
-		status = sysVersion();
-	} while (status != 0);
-	app_show("System started");
-	Fake_t req;
-	RUN(app_start_stack, req)
+	machineState = 1;
+	sysResetReq(&const_hard_rst);
 	while (1)
 		vAppTaskLoop();
 }

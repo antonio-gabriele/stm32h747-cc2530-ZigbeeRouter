@@ -23,7 +23,7 @@ void HomePresenter::scan() {
 
 void HomePresenter::start() {
 	void * req = NULL;
-	RUN(app_start_stack, req)
+	RUN(appStartStack, req)
 }
 
 void HomePresenter::reset(Fake_t devType) {

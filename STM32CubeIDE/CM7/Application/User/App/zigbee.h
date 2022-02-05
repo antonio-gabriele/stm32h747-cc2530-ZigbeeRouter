@@ -15,15 +15,15 @@
 
 uint8_t zb_zdo_explore1(Summary_t*);
 uint8_t zb_zdo_explore(Node_t*, Summary_t*);
-uint8_t zb_zdo_state_changed(uint8_t);
-uint8_t zb_zdo_mgmt_remote_lqi(MgmtLqiRspFormat_t*);
+uint8_t mtZdoStateChangeIndCb(uint8_t);
+uint8_t zbZdoMgmtLqiReq(MgmtLqiRspFormat_t*);
 uint8_t zb_zdo_simple_descriptor(SimpleDescRspFormat_t*);
 uint8_t zb_zdo_end_device_announce(EndDeviceAnnceIndFormat_t*);
-uint8_t zb_zdo_active_endpoint(ActiveEpRspFormat_t*);
-uint8_t zb_sys_reset(ResetIndFormat_t*);
+uint8_t zbZdoActiveEpReq(ActiveEpRspFormat_t*);
+uint8_t mtSysResetIndCb(ResetIndFormat_t*);
 uint8_t zb_sys_version(VersionSrspFormat_t*);
 uint8_t zb_af_incoming_msg(IncomingMsgFormat_t*);
-uint8_t zb_zdo_ieee_address(IeeeAddrRspFormat_t*);
+uint8_t zdoIeeeAddrReqCb(IeeeAddrRspFormat_t*);
 uint8_t zb_zdo_bind(BindRspFormat_t*);
 uint8_t pfnUtilGetDeviceInfoCb(utilGetDeviceInfoFormat_t*);
 Node_t* zb_find_node_by_address(uint16_t);

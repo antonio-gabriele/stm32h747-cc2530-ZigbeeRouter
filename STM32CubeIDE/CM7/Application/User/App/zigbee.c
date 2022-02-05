@@ -22,13 +22,13 @@ mtAfCb_t mtAfCb = { .pfnAfDataConfirm = NULL, //
 		.pfnAfReflectError = NULL, //
 		.pfnAfRegisterSrsp = NULL //
 		};
-mtSysCb_t mtSysCb = { NULL, NULL, NULL, zb_sys_reset, zb_sys_version, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+mtSysCb_t mtSysCb = { NULL, NULL, NULL, mtSysResetIndCb, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
 mtZdoCb_t mtZdoCb = { NULL,       // MT_ZDO_NWK_ADDR_RSP
-		zb_zdo_ieee_address,      // MT_ZDO_IEEE_ADDR_RSP
+		zdoIeeeAddrReqCb,      // MT_ZDO_IEEE_ADDR_RSP
 		NULL,      // MT_ZDO_NODE_DESC_RSP
 		NULL,     // MT_ZDO_POWER_DESC_RSP
 		zb_zdo_simple_descriptor,    // MT_ZDO_SIMPLE_DESC_RSP
-		zb_zdo_active_endpoint,      // MT_ZDO_ACTIVE_EP_RSP
+		zbZdoActiveEpReq,      // MT_ZDO_ACTIVE_EP_RSP
 		NULL,     // MT_ZDO_MATCH_DESC_RSP
 		NULL,   // MT_ZDO_COMPLEX_DESC_RSP
 		NULL,      // MT_ZDO_USER_DESC_RSP
@@ -38,13 +38,13 @@ mtZdoCb_t mtZdoCb = { NULL,       // MT_ZDO_NWK_ADDR_RSP
 		zb_zdo_bind,          // MT_ZDO_BIND_RSP
 		NULL,        // MT_ZDO_UNBIND_RSP
 		NULL,   // MT_ZDO_MGMT_NWK_DISC_RSP
-		zb_zdo_mgmt_remote_lqi,       // MT_ZDO_MGMT_LQI_RSP
+		zbZdoMgmtLqiReq,       // MT_ZDO_MGMT_LQI_RSP
 		NULL,       // MT_ZDO_MGMT_RTG_RSP
 		NULL,      // MT_ZDO_MGMT_BIND_RSP
 		NULL,     // MT_ZDO_MGMT_LEAVE_RSP
 		NULL,     // MT_ZDO_MGMT_DIRECT_JOIN_RSP
 		NULL,     // MT_ZDO_MGMT_PERMIT_JOIN_RSP
-		zb_zdo_state_changed,   // MT_ZDO_STATE_CHANGE_IND
+		mtZdoStateChangeIndCb,   // MT_ZDO_STATE_CHANGE_IND
 		zb_zdo_end_device_announce,   // MT_ZDO_END_DEVICE_ANNCE_IND
 		NULL,        // MT_ZDO_SRC_RTG_IND
 		NULL,	 //MT_ZDO_BEACON_NOTIFY_IND
@@ -57,25 +57,29 @@ mtZdoCb_t mtZdoCb = { NULL,       // MT_ZDO_NWK_ADDR_RSP
 		NULL, NULL };
 /********************************************************************************/
 uint8_t af_counter = 0;
+extern uint8_t machineState;
 extern utilGetDeviceInfoFormat_t system;
 /********************************************************************************/
 uint8_t pfnUtilGetDeviceInfoCb(utilGetDeviceInfoFormat_t *msg) {
-	memcpy(&system, msg, sizeof(utilGetDeviceInfoFormat_t));
-	app_show("I'm: %04X.%llu", msg->short_addr, msg->ieee_addr);
+	if(machineState == 2){
+		machineState = 0;
+		memcpy(&system, msg, sizeof(utilGetDeviceInfoFormat_t));
+		app_show("I'm: %04X.%llu", msg->short_addr, msg->ieee_addr);
+	}
 	return MT_RPC_SUCCESS;
 }
 
-uint8_t zb_sys_reset(ResetIndFormat_t *msg) {
-	printf("Reset ZNP Version: %d.%d.%d\n", msg->MajorRel, msg->MinorRel, msg->HwRev);
-	return 0;
+uint8_t mtSysResetIndCb(ResetIndFormat_t *msg) {
+	if(machineState == 1){
+		machineState = 0;
+		app_show("System started");
+		Fake_t req;
+		RUN(appStartStack, req)
+	}
+	return MT_RPC_SUCCESS;
 }
 
-uint8_t zb_sys_version(VersionSrspFormat_t *msg) {
-	printf("Request ZNP Version: %d.%d.%d\n", msg->MajorRel, msg->MinorRel, msg->Product);
-	return 0;
-}
-
-uint8_t zb_zdo_state_changed(uint8_t newDevState) {
+uint8_t mtZdoStateChangeIndCb(uint8_t newDevState) {
 
 	switch (newDevState) {
 	case DEV_HOLD:
@@ -130,7 +134,7 @@ uint8_t zb_zdo_explore1(Summary_t *summary) {
 	return MT_RPC_SUCCESS;
 }
 
-uint8_t zb_zdo_ieee_address(IeeeAddrRspFormat_t *msg) {
+uint8_t zdoIeeeAddrReqCb(IeeeAddrRspFormat_t *msg) {
 	xTimerReset(xTimer, 0);
 	if (msg->Status != MT_RPC_SUCCESS) {
 		return msg->Status;
@@ -244,7 +248,7 @@ uint8_t zb_zdo_end_device_announce(EndDeviceAnnceIndFormat_t *msg) {
 	return MT_RPC_SUCCESS;
 }
 
-uint8_t zb_zdo_mgmt_remote_lqi(MgmtLqiRspFormat_t *msg) {
+uint8_t zbZdoMgmtLqiReq(MgmtLqiRspFormat_t *msg) {
 	xTimerReset(xTimer, 0);
 	if (msg->Status != MT_RPC_SUCCESS) {
 		return msg->Status;
@@ -323,7 +327,7 @@ uint8_t zb_zdo_simple_descriptor(SimpleDescRspFormat_t *msg) {
 	return msg->Status;
 }
 
-uint8_t zb_zdo_active_endpoint(ActiveEpRspFormat_t *msg) {
+uint8_t zbZdoActiveEpReq(ActiveEpRspFormat_t *msg) {
 	xTimerReset(xTimer, 0);
 	printf("AEND: %04X -> %d", msg->SrcAddr, msg->Status);
 	if (msg->Status != MT_RPC_SUCCESS) {
