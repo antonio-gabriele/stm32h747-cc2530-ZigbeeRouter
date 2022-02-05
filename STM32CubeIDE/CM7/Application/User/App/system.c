@@ -70,26 +70,8 @@ uint8_t cfgWrite(void *none) {
 				WRITE
 				snprintf(writeBuff, sizeof(writeBuff), "\"Endpoint\" : \"%d\",\n", endpoint->Endpoint);
 				WRITE
-				/********************************************************************************************************************************/
-				/********************************************************************************************************************************/
-				if (endpoint->InClusterCount > 0) {
-					snprintf(writeBuff, sizeof(writeBuff), "\"InClusters\" :\n");
-					WRITE
-					snprintf(writeBuff, sizeof(writeBuff), "[\n");
-					WRITE
-					uint8_t iInCluster;
-					for (iInCluster = 0; iInCluster < endpoint->InClusterCount; iInCluster++) {
-						Cluster_t *cluster = &endpoint->InClusters[iInCluster];
-						snprintf(writeBuff, sizeof(writeBuff), "{\n");
-						WRITE
-						snprintf(writeBuff, sizeof(writeBuff), "\"Cluster\" : \"%d\",\n", cluster->Cluster);
-						WRITE
-						snprintf(writeBuff, sizeof(writeBuff), "},\n");
-						WRITE
-					}
-					snprintf(writeBuff, sizeof(writeBuff), "]\n");
-					WRITE
-				}
+				snprintf(writeBuff, sizeof(writeBuff), "\"C6Exists\" : \"%d\",\n", endpoint->C06Exists);
+				WRITE
 				snprintf(writeBuff, sizeof(writeBuff), "},\n");
 				WRITE
 				/********************************************************************************************************************************/

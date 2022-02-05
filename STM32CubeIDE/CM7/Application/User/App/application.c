@@ -88,9 +88,9 @@ uint8_t appRepair() {
 uint8_t appCount() {
 	Summary_t summary = { 0 };
 	zbCount(&summary);
-	uint8_t thumb = summary.nEndpoints + summary.nEndpointsSDOk + summary.nNodesNameOk + summary.nNodesAEOk + summary.nNodesIEEEOk + summary.nNodesLQOk;
+	uint8_t thumb = summary.nEndpoints + summary.nEndpointsSDOk + summary.nEndpointsBindOk + summary.nEndpointsValueOk + summary.nNodesNameOk + summary.nNodesAEOk + summary.nNodesIEEEOk + summary.nNodesLQOk + summary.nNodes;
 	if (bsum != thumb) {
-		appPrintf("ND:%d/AE:%d/IE:%d/LQ:%d/ID:%d-EP:%d/SD:%d/BN:%d", //
+		appPrintf("ND:%d/AE:%d/IE:%d/LQ:%d/ID:%d-EP:%d/SD:%d/BN:%d/VL:%d", //
 				summary.nNodes, //
 				summary.nNodesAEOk, //
 				summary.nNodesIEEEOk, //
@@ -98,7 +98,8 @@ uint8_t appCount() {
 				summary.nNodesNameOk, //
 				summary.nEndpoints, //
 				summary.nEndpointsSDOk, //
-				summary.nEndpointsBindOk);
+				summary.nEndpointsBindOk, //
+				summary.nEndpointsValueOk);
 	}
 	bsum = thumb;
 	return MT_RPC_SUCCESS;
@@ -159,7 +160,7 @@ void vAppTaskLoop() {
 }
 
 void vAppTask(void *pvParameters) {
-	zb_init();
+	zbInit();
 	vTaskDelay(1000);
 	machineState = 1;
 	sysResetReq(&const_hard_rst);

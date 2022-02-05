@@ -28,7 +28,7 @@ mtZdoCb_t mtZdoCb = { NULL,       // MT_ZDO_NWK_ADDR_RSP
 		mtZdoIeeeAddrRspCb,      // MT_ZDO_IEEE_ADDR_RSP
 		NULL,      // MT_ZDO_NODE_DESC_RSP
 		NULL,     // MT_ZDO_POWER_DESC_RSP
-		zb_zdo_simple_descriptor,    // MT_ZDO_SIMPLE_DESC_RSP
+		mtZdoSimpleDescRspCb,    // MT_ZDO_SIMPLE_DESC_RSP
 		mtZdoActiveEpRspCb,      // MT_ZDO_ACTIVE_EP_RSP
 		NULL,     // MT_ZDO_MATCH_DESC_RSP
 		NULL,   // MT_ZDO_COMPLEX_DESC_RSP
@@ -99,6 +99,7 @@ uint8_t mtZdoActiveEpRspCb(ActiveEpRspFormat_t *msg) {
 		uint8_t endpoint = msg->ActiveEPList[i];
 		node->Endpoints[i].Endpoint = endpoint;
 		node->Endpoints[i].SimpleDescriptorRetry = ZB_RE;
+		node->Endpoints[i].C06Exists = ZB_KO;
 		printf(" %d", endpoint);
 	}
 	printf("\n");
@@ -179,6 +180,37 @@ uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t *msg) {
 	return msg->Status;
 }
 
+uint8_t mtZdoSimpleDescRspCb(SimpleDescRspFormat_t *msg) {
+	xTimerReset(xTimer, 0);
+	if (msg->Status != MT_RPC_SUCCESS) {
+		return msg->Status;
+	}
+	Node_t *node = zbFindNodeByAddress(msg->NwkAddr);
+	if (node == NULL) {
+		return MT_RPC_SUCCESS;
+	}
+	Endpoint_t *endpoint = zbFindEndpoint(node, msg->Endpoint);
+	if (endpoint == NULL || endpoint->SimpleDescriptorRetry == ZB_OK) {
+		return MT_RPC_SUCCESS;
+	}
+	if (msg->Endpoint == 0) {
+		endpoint->SimpleDescriptorRetry = ZB_KO;
+		return msg->Status;
+	}
+	endpoint->SimpleDescriptorRetry = ZB_OK;
+	uint32_t i;
+	for (i = 0; i < msg->NumInClusters; i++) {
+		if(msg->InClusterList[i] == 0x06){
+			printf("SDES.06: %04X.%d -> %d\n", msg->NwkAddr, msg->Endpoint, msg->Status);
+			endpoint->C06Exists = ZB_OK;
+			endpoint->C06BindRetry = ZB_RE;
+			endpoint->C06ValueRetry = ZB_RE;
+		}
+	}
+	zbRepairNode(node, true);
+	return msg->Status;
+}
+
 uint8_t mtZdoStateChangeIndCb(uint8_t newDevState) {
 	switch (newDevState) {
 	case DEV_HOLD:
@@ -221,15 +253,6 @@ uint8_t mtZdoStateChangeIndCb(uint8_t newDevState) {
 	return SUCCESS;
 }
 
-uint8_t zb_zdo_explore1(Summary_t *summary) {
-	uint8_t iNode;
-	for (iNode = 0; iNode < sys_cfg.NodesCount; iNode++) {
-		Node_t *node = &sys_cfg.Nodes[iNode];
-		//zbRepairNode(node, summary);
-	}
-	return MT_RPC_SUCCESS;
-}
-
 uint8_t zb_zdo_bind(BindRspFormat_t *msg) {
 	if (msg->Status != MT_RPC_SUCCESS) {
 		return msg->Status;
@@ -262,18 +285,15 @@ uint8_t zbCount(Summary_t *summary) {
 			if (endpoint->SimpleDescriptorRetry == ZB_OK) {
 				summary->nEndpointsSDOk++;
 			}
-			/*
-			 uint8_t iCluster;
-			 for (iCluster = 0; iCluster < endpoint->InClusterCount; iCluster++) {
-			 Cluster_t *cluster = &(endpoint->InClusters[iCluster]);
-			 if (cluster->B0 > 0) {
-			 BindReqFormat_t req = { .ClusterID = 0x06, .DstAddr = system.short_addr, .DstEndpoint = 1, .SrcEndpoint = endpoint->Endpoint, .SrcAddress = node->Address };
-			 RUN(zdoBindReq, req)
-			 } else {
-			 summary->nEndpointsBindOk++;
-			 }
-			 }
-			 */
+			if (endpoint->SimpleDescriptorRetry != ZB_OK) {
+				break;
+			}
+			if (endpoint->C06BindRetry == ZB_OK) {
+				summary->nEndpointsBindOk++;
+			}
+			if (endpoint->C06ValueRetry == ZB_OK) {
+				summary->nEndpointsValueOk++;
+			}
 		}
 	}
 	return MT_RPC_SUCCESS;
@@ -333,6 +353,10 @@ uint8_t zbRepairNode(Node_t *node, bool reset) {
 			Endpoint_t *endpoint = &node->Endpoints[iEndpoint];
 			if (endpoint->SimpleDescriptorRetry == ZB_KO)
 				endpoint->SimpleDescriptorRetry = ZB_RE;
+			if (endpoint->C06ValueRetry == ZB_KO)
+				endpoint->C06ValueRetry = ZB_RE;
+			if (endpoint->C06BindRetry == ZB_KO)
+				endpoint->C06BindRetry = ZB_RE;
 		}
 	}
 	if (node->LqiRetry != ZB_OK && node->LqiRetry != ZB_KO) {
@@ -375,18 +399,27 @@ uint8_t zbRepairNode(Node_t *node, bool reset) {
 			SimpleDescReqFormat_t req = { .DstAddr = node->Address, .NwkAddrOfInterest = node->Address, .Endpoint = endpoint->Endpoint };
 			RUN(zdoSimpleDescReq, req)
 		}
-		/*
-		 uint8_t iCluster;
-		 for (iCluster = 0; iCluster < endpoint->InClusterCount; iCluster++) {
-		 Cluster_t *cluster = &(endpoint->InClusters[iCluster]);
-		 if (cluster->B0 > 0) {
-		 BindReqFormat_t req = { .ClusterID = 0x06, .DstAddr = system.short_addr, .DstEndpoint = 1, .SrcEndpoint = endpoint->Endpoint, .SrcAddress = node->Address };
-		 RUN(zdoBindReq, req)
-		 } else {
-		 summary->nEndpointsBindOk++;
-		 }
-		 }
-		 */
+		if(endpoint->SimpleDescriptorRetry != ZB_OK){
+			break;
+		}
+		if(endpoint->C06Exists != ZB_OK){
+			break;
+		}
+		if (endpoint->C06ValueRetry != ZB_OK && endpoint->C06ValueRetry != ZB_KO) {
+			endpoint->C06ValueRetry++;
+			DataRequestFormat_t req = { .ClusterID = 0x06, .DstAddr = node->Address, .DstEndpoint = endpoint->Endpoint, .SrcEndpoint = 1, .Len = 5, .Options = 0, .Radius = 0, .TransID = 1 };
+			req.Data[0] = 0x00;
+			req.Data[1] = (af_counter++) % 255;
+			req.Data[2] = 0x00;
+			req.Data[3] = 0x00;
+			req.Data[4] = 0x00;
+			RUN(afDataRequest, req)
+		}
+		if (endpoint->C06BindRetry != ZB_OK && endpoint->C06BindRetry != ZB_KO) {
+			endpoint->C06BindRetry++;
+			BindReqFormat_t req = { .ClusterID = 0x06, .DstAddr = system.short_addr, .DstEndpoint = 1, .SrcEndpoint = endpoint->Endpoint, .SrcAddress = node->Address };
+			RUN(zdoBindReq, req)
+		}
 	}
 	return MT_RPC_SUCCESS;
 }
@@ -401,51 +434,6 @@ uint8_t zbRepair(Fake_t *f) {
 		zbRepairNode(node, reset);
 	}
 	return MT_RPC_SUCCESS;
-}
-
-uint8_t zb_zdo_simple_descriptor(SimpleDescRspFormat_t *msg) {
-	xTimerReset(xTimer, 0);
-	if (msg->Status != MT_RPC_SUCCESS) {
-		return msg->Status;
-	}
-	Node_t *node = zbFindNodeByAddress(msg->NwkAddr);
-	if (node == NULL) {
-		return MT_RPC_SUCCESS;
-	}
-	Endpoint_t *endpoint = zbFindEndpoint(node, msg->Endpoint);
-	if (endpoint == NULL || endpoint->SimpleDescriptorRetry == ZB_OK) {
-		return MT_RPC_SUCCESS;
-	}
-	if (msg->Endpoint == 0) {
-		endpoint->SimpleDescriptorRetry = ZB_KO;
-		return msg->Status;
-	}
-	printf("SDES: %04X.%d -> %d", msg->NwkAddr, msg->Endpoint, msg->Status);
-	endpoint->SimpleDescriptorRetry = ZB_OK;
-	endpoint->InClusterCount = msg->NumInClusters;
-	endpoint->OutClusterCount = msg->NumOutClusters;
-	uint32_t i;
-	for (i = 0; i < msg->NumInClusters; i++) {
-		printf(" I%d", msg->InClusterList[i]);
-		endpoint->InClusters[i].Cluster = msg->InClusterList[i];
-		if (msg->InClusterList[i] == 0x06) {
-			endpoint->InClusters[i].B0 = ZB_KO;
-			DataRequestFormat_t req = { .ClusterID = 6, .DstAddr = msg->NwkAddr, .DstEndpoint = msg->Endpoint, .SrcEndpoint = 1, .Len = 5, .Options = 0, .Radius = 0, .TransID = 1 };
-			req.Data[0] = 0x00;
-			req.Data[1] = (af_counter++) % 255;
-			req.Data[2] = 0x00;
-			req.Data[3] = 0x00;
-			req.Data[4] = 0x00;
-			RUN(afDataRequest, req)
-		}
-	}
-	for (i = 0; i < msg->NumOutClusters; i++) {
-		printf(" O%d", msg->OutClusterList[i]);
-		endpoint->OutClusters[i].Cluster = msg->OutClusterList[i];
-	}
-	printf("\n");
-	zbRepairNode(node, true);
-	return msg->Status;
 }
 
 uint8_t zb_af_incoming_msg_cmd01_c00(IncomingMsgFormat_t *msg) {
@@ -486,8 +474,8 @@ uint8_t zb_af_incoming_msg_cmd01_c06(IncomingMsgFormat_t *msg) {
 			uint8_t zigbeeType = msg->Data[j++];
 			if (zigbeeType == 16) {
 				Endpoint_t *endpoint = zbFindEndpoint(node, msg->SrcEndpoint);
-				Cluster_t *cluster = zb_find_cluster(endpoint, msg->ClusterId);
-				cluster->A0 = msg->Data[j++];
+				endpoint->C06ValueRetry = ZB_OK;
+				endpoint->C06Value = msg->Data[j++];
 			}
 		}
 	}
@@ -513,16 +501,6 @@ uint8_t zb_af_incoming_msg(IncomingMsgFormat_t *msg) {
 		break;
 	}
 	return MT_RPC_SUCCESS;
-}
-
-Cluster_t* zb_find_cluster(Endpoint_t *endpoint, uint16_t cluster) {
-	uint8_t i1;
-	for (i1 = 0; i1 < endpoint->InClusterCount; ++i1) {
-		if (endpoint->InClusters[i1].Cluster == cluster) {
-			return &endpoint->InClusters[i1];
-		}
-	}
-	return NULL;
 }
 
 Endpoint_t* zbFindEndpoint(Node_t *node, uint8_t endpoint) {
@@ -555,7 +533,7 @@ Node_t* zbFindNodeByIEEE(uint64_t ieee) {
 	return NULL;
 }
 
-void zb_init() {
+void zbInit() {
 	utilRegisterCallbacks(mtUtilCb);
 	sysRegisterCallbacks(mtSysCb);
 	zdoRegisterCallbacks(mtZdoCb);

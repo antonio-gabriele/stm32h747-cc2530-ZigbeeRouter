@@ -5,22 +5,16 @@
 
 #define MAX_NODES 64
 #define MAX_ENDPS 16
-#define MAX_CLUSR 16
 #define TEXTAREA_SIZE1 8192
-
-typedef struct {
-	uint16_t Cluster;
-	uint8_t A0;
-	uint8_t B0;
-} Cluster_t;
 
 typedef struct {
 	uint8_t Endpoint;
 	uint8_t SimpleDescriptorRetry;
-	uint8_t InClusterCount;
-	Cluster_t InClusters[MAX_CLUSR];
-	uint8_t OutClusterCount;
-	Cluster_t OutClusters[MAX_CLUSR];
+	uint8_t C06Exists;
+	uint8_t C06Value;
+	uint8_t C06Bind;
+	uint8_t C06ValueRetry;
+	uint8_t C06BindRetry;
 } Endpoint_t;
 
 typedef struct {
@@ -53,7 +47,7 @@ typedef struct {
 	uint8_t nEndpoints;
 	uint8_t nEndpointsSDOk;
 	uint8_t nEndpointsBindOk;
-	Endpoint_t *E06[64];
+	uint8_t nEndpointsValueOk;
 } Summary_t;
 
 typedef union {
@@ -63,7 +57,6 @@ typedef union {
 } Fake_t;
 
 typedef struct {
-	Cluster_t * Cluster;
 	Endpoint_t * Endpoint;
 	Node_t * Node;
 } Tuple1_t;

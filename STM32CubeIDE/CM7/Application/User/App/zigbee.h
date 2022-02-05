@@ -15,6 +15,7 @@
 #define ZB_RE (0xFF-0x08)
 /********************************************************************************/
 /********************************************************************************/
+void zbInit();
 uint8_t zbStartScan(Fake_t*);
 /********************************************************************************/
 /********************************************************************************/
@@ -26,11 +27,10 @@ uint8_t zbCount(Summary_t*);
 /********************************************************************************/
 uint8_t mtZdoStateChangeIndCb(uint8_t);
 uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t*);
-uint8_t zb_zdo_simple_descriptor(SimpleDescRspFormat_t*);
+uint8_t mtZdoSimpleDescRspCb(SimpleDescRspFormat_t*);
 uint8_t mtZdoEndDeviceAnnceIndCb(EndDeviceAnnceIndFormat_t*);
 uint8_t mtZdoActiveEpRspCb(ActiveEpRspFormat_t*);
 uint8_t mtSysResetIndCb(ResetIndFormat_t*);
-uint8_t zb_sys_version(VersionSrspFormat_t*);
 uint8_t zb_af_incoming_msg(IncomingMsgFormat_t*);
 uint8_t mtZdoIeeeAddrRspCb(IeeeAddrRspFormat_t*);
 uint8_t zb_zdo_bind(BindRspFormat_t*);
@@ -38,7 +38,4 @@ uint8_t pfnUtilGetDeviceInfoCb(utilGetDeviceInfoFormat_t*);
 Node_t* zbFindNodeByAddress(uint16_t);
 Node_t* zbFindNodeByIEEE(uint64_t);
 Endpoint_t* zbFindEndpoint(Node_t*, uint8_t);
-Cluster_t* zb_find_cluster(Endpoint_t*, uint16_t);
-void zb_init();
-
 #endif

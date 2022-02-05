@@ -18,7 +18,7 @@ void Device::refresh(){
 	char caption[64] = { 0 };
 	char *mn = (char*) tuple->Node->ManufacturerName;
 	//char *mi = (char*) tuple->Node->ModelIdentifier;
-	uint8_t activeState = tuple->Cluster->A0;
+	uint8_t activeState = tuple->Endpoint->C06Value;
 	sprintf(caption, "%s %04X.%d (%d)", mn, tuple->Node->Address, tuple->Endpoint->Endpoint, activeState);
 	uint8_t length = strlen(caption) > BTNONOFFCAPTION_SIZE ? BTNONOFFCAPTION_SIZE : strlen(caption);
 	Unicode::strncpy(this->btnOnOffCaptionBuffer, caption, length);
