@@ -7,7 +7,7 @@
 #include <FreeRTOS.h>
 #include <queue.h>
 
-extern QueueHandle_t xQueueViewToBackend;
+extern QueueHandle_t xQueue;
 extern uint8_t af_counter;
 
 Device::Device() {

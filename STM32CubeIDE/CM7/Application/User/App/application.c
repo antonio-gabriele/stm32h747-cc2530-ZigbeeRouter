@@ -12,8 +12,6 @@
 #include "mtZdo.h"
 #include "rpc.h"
 #include "rpcTransport.h"
-#include "znp_cmd.h"
-#include "znp_if.h"
 #include <FreeRTOS.h>
 #include <queue.h>
 #include <system.h>
@@ -23,11 +21,27 @@
 #include <timers.h>
 #include <zigbee.h>
 /**/
-Configuration_t sys_cfg = { 0 };
-QueueHandle_t xQueueViewToBackend;
-QueueHandle_t xQueueBackendToView;
+/********************************************************************************/
+/********************************************************************************/
+#define QUEUE_LENGTH    64
+#define STACK_SIZE 		2048
+#define ITEM_SIZE       sizeof( struct AppMessage )
+/********************************************************************************/
+/********************************************************************************/
 TimerHandle_t xTimer;
-StaticTimer_t xTimerBuffer;
+static StaticTimer_t xTimerBuffer;
+static StaticTask_t xTaskBufferPoll;
+static StackType_t xStackPoll[STACK_SIZE];
+static StaticTask_t xTaskBufferApp;
+static StackType_t xStackApp[STACK_SIZE];
+static StaticTask_t xTaskBufferCom;
+static StackType_t xStackCom[STACK_SIZE];
+static StaticQueue_t xStaticQueue;
+static uint8_t ucQueueStorageArea[QUEUE_LENGTH * ITEM_SIZE];
+/********************************************************************************/
+/********************************************************************************/
+Configuration_t sys_cfg = { 0 };
+QueueHandle_t xQueue;
 utilGetDeviceInfoFormat_t system;
 ResetReqFormat_t const_hard_rst = { .Type = 0 };
 uint8_t bsum = 0;
@@ -35,11 +49,11 @@ uint8_t machineState = 0;
 /********************************************************************************/
 void call_C_displayMessage(char *message);
 /********************************************************************************/
-uint8_t app_show(const char *fmt, ...) {
+uint8_t appPrintf(const char *fmt, ...) {
 	char content[64];
 	va_list args;
 	va_start(args, fmt);
-	vsnprintf(content, 256, fmt, args);
+	vsnprintf(content, 64, fmt, args);
 	va_end(args);
 	call_C_displayMessage(content);
 	return 0;
@@ -54,40 +68,48 @@ uint8_t app_reset(Fake_t *devType) {
 	OsalNvWriteFormat_t nvWrite = { .Id = ZCD_NV_LOGICAL_TYPE, .Offset = 0, .Len = 1, .Value[0] = devType->u8 };
 	status = sysOsalNvWrite(&nvWrite);
 	if (status != 0) {
-		app_show("Errore");
+		appPrintf("Errore");
 	}
-	//
 	status = sysResetReq(&const_hard_rst);
 	if (status != 0) {
-		app_show("Errore");
+		appPrintf("Errore");
 	}
 	vTaskDelay(4000);
 	sys_cfg.DeviceType = devType->u8;
 	sys_cfg.NodesCount = 0;
-	return 0;
+	return MT_RPC_SUCCESS;
 }
 
-uint8_t app_summary(void *none) {
-	xTimerReset(xTimer, 0);
+uint8_t appRepair() {
+	zbRepair(NULL);
+	return MT_RPC_SUCCESS;
+}
+
+uint8_t appCount() {
 	Summary_t summary = { 0 };
-	zb_zdo_explore1(&summary);
+	zbCount(&summary);
 	uint8_t thumb = summary.nEndpoints + summary.nEndpointsSDOk + summary.nNodesNameOk + summary.nNodesAEOk + summary.nNodesIEEEOk + summary.nNodesLQOk;
-	//if (summary.nNodesNameOk < summary.nNodes || summary.nEndpointsBindOk < summary.nEndpoints) {
-	//xTimerStart(xTimer, 0);
-	//}
 	if (bsum != thumb) {
-		 app_show("ND:%d/AE:%d/IE:%d/LQ:%d/ID:%d-EP:%d/SD:%d/BN:%d", //
-		 summary.nNodes, //
-		 summary.nNodesAEOk, //
-		 summary.nNodesIEEEOk, //
-		 summary.nNodesLQOk, //
-		 summary.nNodesNameOk, //
-		 summary.nEndpoints, //
-		 summary.nEndpointsSDOk, //
-		 summary.nEndpointsBindOk);
+		appPrintf("ND:%d/AE:%d/IE:%d/LQ:%d/ID:%d-EP:%d/SD:%d/BN:%d", //
+				summary.nNodes, //
+				summary.nNodesAEOk, //
+				summary.nNodesIEEEOk, //
+				summary.nNodesLQOk, //
+				summary.nNodesNameOk, //
+				summary.nEndpoints, //
+				summary.nEndpointsSDOk, //
+				summary.nEndpointsBindOk);
 	}
 	bsum = thumb;
-	return 0;
+	return MT_RPC_SUCCESS;
+
+}
+
+uint8_t appTick() {
+	xTimerReset(xTimer, 0);
+	appRepair();
+	appCount();
+	return MT_RPC_SUCCESS;
 }
 
 static int32_t app_register_af(void) {
@@ -102,8 +124,8 @@ static int32_t app_register_af(void) {
 
 uint8_t app_scanner(void *none) {
 	xTimerReset(xTimer, 0);
-	MgmtLqiReqFormat_t req = { .DstAddr = 0, .StartIndex = 0 };
-	RUN(zdoMgmtLqiReq, req)
+	Fake_t req;
+	zbStartScan(&req);
 	return MT_RPC_SUCCESS;
 }
 
@@ -111,13 +133,13 @@ uint8_t appStartStack(void *none) {
 	uint8_t status = app_register_af();
 	status = zdoInit();
 	if (status == NEW_NETWORK) {
-		app_show("Start new network");
+		appPrintf("Start new network");
 		status = MT_RPC_SUCCESS;
 	} else if (status == RESTORED_NETWORK) {
-		app_show("Restored network");
+		appPrintf("Restored network");
 		status = MT_RPC_SUCCESS;
 	} else {
-		app_show("Start failed");
+		appPrintf("Start failed");
 		status = -1;
 	}
 	machineState = 2;
@@ -128,7 +150,7 @@ uint8_t appStartStack(void *none) {
 
 void vAppTaskLoop() {
 	struct AppMessage xRxedStructure;
-	if (xQueueReceive(xQueueViewToBackend, (struct AppMessage*) &xRxedStructure, (TickType_t) 10) == pdPASS) {
+	if (xQueueReceive(xQueue, (struct AppMessage*) &xRxedStructure, (TickType_t) portMAX_DELAY) == pdPASS) {
 		if (xRxedStructure.fn != NULL) {
 			void (*fn)(void*) = xRxedStructure.fn;
 			fn(xRxedStructure.params);
@@ -138,8 +160,6 @@ void vAppTaskLoop() {
 
 void vAppTask(void *pvParameters) {
 	zb_init();
-	znp_if_init();
-	znp_cmd_init();
 	vTaskDelay(1000);
 	machineState = 1;
 	sysResetReq(&const_hard_rst);
@@ -147,24 +167,30 @@ void vAppTask(void *pvParameters) {
 		vAppTaskLoop();
 }
 
+void vPollTask(void *pvParameters) {
+	while (1) {
+		rpcWaitMqClientMsg(1);
+	}
+}
+
 void vComTask(void *pvParameters) {
+	rpcInitMq();
+	rpcOpen();
+	xTaskCreateStatic(vPollTask, "POLL", STACK_SIZE, NULL, 5, xStackPoll, &xTaskBufferPoll);
 	while (1) {
 		rpcProcess();
-		rpcWaitMqClientMsg(10);
+		vTaskDelay(1);
 	}
 }
 
 void vTimerCallback(TimerHandle_t xTimer) {
-	app_summary(NULL);
+	appTick();
 }
 
 uint8_t app_init(void *none) {
-	rpcInitMq();
-	rpcOpen();
-	xQueueViewToBackend = xQueueCreate(16, sizeof(struct AppMessage));
-	xQueueBackendToView = xQueueCreate(4, sizeof(struct AppMessage));
-	xTimer = xTimerCreateStatic("Timer", pdMS_TO_TICKS(4000), pdFALSE, (void*) 0, vTimerCallback, &xTimerBuffer);
-	xTaskCreate(vAppTask, "APP", 1024, NULL, 8, NULL);
-	xTaskCreate(vComTask, "COM", 1024, NULL, 6, NULL);
-	return 0;
+	xQueue = xQueueCreateStatic(QUEUE_LENGTH, ITEM_SIZE, ucQueueStorageArea, &xStaticQueue);
+	xTimer = xTimerCreateStatic("Timer", pdMS_TO_TICKS(1000), pdFALSE, (void*) 0, vTimerCallback, &xTimerBuffer);
+	xTaskCreateStatic(vAppTask, "APP", STACK_SIZE, NULL, tskIDLE_PRIORITY, xStackApp, &xTaskBufferApp);
+	xTaskCreateStatic(vComTask, "COM", STACK_SIZE, NULL, 6, xStackCom, &xTaskBufferCom);
+	return MT_RPC_SUCCESS;
 }

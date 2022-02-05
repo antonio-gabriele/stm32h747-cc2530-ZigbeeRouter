@@ -11,24 +11,32 @@
 
 #define ZB_OK 0x00
 #define ZB_KO 0xFF
-#define ZB_RE (0xFF-0x04)
-
-uint8_t zb_zdo_explore1(Summary_t*);
-uint8_t zb_zdo_explore(Node_t*, Summary_t*);
+#define ZB_RE (0xFF-0x08)
+/********************************************************************************/
+/********************************************************************************/
+uint8_t zbStartScan(Fake_t*);
+/********************************************************************************/
+/********************************************************************************/
+uint8_t zbRepair(Fake_t*);
+uint8_t zbRepairNode(Node_t*);
+uint8_t zbRepairNodeEndpoint(Node_t*, Endpoint_t*);
+uint8_t zbCount(Summary_t*);
+/********************************************************************************/
+/********************************************************************************/
 uint8_t mtZdoStateChangeIndCb(uint8_t);
-uint8_t zbZdoMgmtLqiReq(MgmtLqiRspFormat_t*);
+uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t*);
 uint8_t zb_zdo_simple_descriptor(SimpleDescRspFormat_t*);
-uint8_t zb_zdo_end_device_announce(EndDeviceAnnceIndFormat_t*);
-uint8_t zbZdoActiveEpReq(ActiveEpRspFormat_t*);
+uint8_t mtZdoEndDeviceAnnceIndCb(EndDeviceAnnceIndFormat_t*);
+uint8_t mtZdoActiveEpRspCb(ActiveEpRspFormat_t*);
 uint8_t mtSysResetIndCb(ResetIndFormat_t*);
 uint8_t zb_sys_version(VersionSrspFormat_t*);
 uint8_t zb_af_incoming_msg(IncomingMsgFormat_t*);
-uint8_t zdoIeeeAddrReqCb(IeeeAddrRspFormat_t*);
+uint8_t mtZdoIeeeAddrRspCb(IeeeAddrRspFormat_t*);
 uint8_t zb_zdo_bind(BindRspFormat_t*);
 uint8_t pfnUtilGetDeviceInfoCb(utilGetDeviceInfoFormat_t*);
-Node_t* zb_find_node_by_address(uint16_t);
-Node_t* zb_find_node_by_ieee(uint64_t);
-Endpoint_t* zb_find_endpoint(Node_t*, uint8_t);
+Node_t* zbFindNodeByAddress(uint16_t);
+Node_t* zbFindNodeByIEEE(uint64_t);
+Endpoint_t* zbFindEndpoint(Node_t*, uint8_t);
 Cluster_t* zb_find_cluster(Endpoint_t*, uint16_t);
 void zb_init();
 

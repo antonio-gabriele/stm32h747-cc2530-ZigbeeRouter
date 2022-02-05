@@ -3,9 +3,9 @@
 
 #include <stdint.h>
 
-#define MAX_NODES 100
-#define MAX_ENDPS 8
-#define MAX_CLUSR 8
+#define MAX_NODES 64
+#define MAX_ENDPS 16
+#define MAX_CLUSR 16
 #define TEXTAREA_SIZE1 8192
 
 typedef struct {
@@ -32,8 +32,8 @@ typedef struct {
 	uint8_t Type;
 	uint8_t EndpointCount;
 	uint8_t NameRetry;
-	uint8_t ManufacturerName[32];
-	uint8_t ModelIdentifier[32];
+	char ManufacturerName[32];
+	char ModelIdentifier[32];
 	Endpoint_t Endpoints[MAX_ENDPS];
 } Node_t;
 
@@ -73,12 +73,12 @@ typedef struct {
 #define RUN(FN,PAR)	\
 	struct AppMessage message = { .fn = (void (*)(void*)) (&FN) }; \
 	memcpy(message.params, &PAR, sizeof(PAR)); \
-	xQueueSendToFront(xQueueViewToBackend, (void* ) &message, (TickType_t ) portMAX_DELAY);
+	xQueueSendToFront(xQueue, (void* ) &message, (TickType_t ) portMAX_DELAY);
 
 #define RUNNOW(FN,PAR)	\
 	struct AppMessage message = { .fn = (void (*)(void*)) (&FN) }; \
 	memcpy(message.params, &PAR, sizeof(PAR)); \
-	xQueueSendToBack(xQueueViewToBackend, (void* ) &message, (TickType_t ) portMAX_DELAY);
+	xQueueSendToBack(xQueue, (void* ) &message, (TickType_t ) portMAX_DELAY);
 
 struct AppMessage {
 	void (*fn)(void*);
@@ -89,7 +89,7 @@ uint8_t app_scanner(void *none);
 uint8_t appStartStack(void *none);
 uint8_t app_init(void *none);
 uint8_t app_reset(Fake_t *devType);
-uint8_t app_summary(void *none);
-uint8_t app_show(const char *fmt, ...);
+uint8_t appRepair();
+uint8_t appPrintf(const char *fmt, ...);
 
 #endif

@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 
-extern QueueHandle_t xQueueViewToBackend;
+extern QueueHandle_t xQueue;
 
 HomePresenter::HomePresenter(HomeView &v) :
 		view(v) {
