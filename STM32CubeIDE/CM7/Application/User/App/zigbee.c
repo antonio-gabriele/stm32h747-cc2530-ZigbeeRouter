@@ -18,7 +18,7 @@ mtUtilCb_t mtUtilCb = { .pfnUtilGetDeviceInfoCb_t = pfnUtilGetDeviceInfoCb };
 mtAfCb_t mtAfCb = { .pfnAfDataConfirm = NULL, //
 		.pfnAfDataReqeuestSrsp = NULL, //
 		.pfnAfDataRetrieveSrsp = NULL, //
-		.pfnAfIncomingMsg = zb_af_incoming_msg, //
+		.pfnAfIncomingMsg = mtAfIncomingMsgCb, //
 		.pfnAfIncomingMsgExt = NULL, //
 		.pfnAfReflectError = NULL, //
 		.pfnAfRegisterSrsp = NULL //
@@ -36,7 +36,7 @@ mtZdoCb_t mtZdoCb = { NULL,       // MT_ZDO_NWK_ADDR_RSP
 		NULL,     // MT_ZDO_USER_DESC_CONF
 		NULL,    // MT_ZDO_SERVER_DISC_RSP
 		NULL, // MT_ZDO_END_DEVICE_BIND_RSP
-		zb_zdo_bind,          // MT_ZDO_BIND_RSP
+		mtZdoBindRspCb,          // MT_ZDO_BIND_RSP
 		NULL,        // MT_ZDO_UNBIND_RSP
 		NULL,   // MT_ZDO_MGMT_NWK_DISC_RSP
 		mtZdoMgmtLqiRspCb,       // MT_ZDO_MGMT_LQI_RSP
@@ -200,7 +200,7 @@ uint8_t mtZdoSimpleDescRspCb(SimpleDescRspFormat_t *msg) {
 	endpoint->SimpleDescriptorRetry = ZB_OK;
 	uint32_t i;
 	for (i = 0; i < msg->NumInClusters; i++) {
-		if(msg->InClusterList[i] == 0x06){
+		if (msg->InClusterList[i] == 0x06) {
 			printf("SDES.06: %04X.%d -> %d\n", msg->NwkAddr, msg->Endpoint, msg->Status);
 			endpoint->C06Exists = ZB_OK;
 			endpoint->C06BindRetry = ZB_RE;
@@ -253,11 +253,21 @@ uint8_t mtZdoStateChangeIndCb(uint8_t newDevState) {
 	return SUCCESS;
 }
 
-uint8_t zb_zdo_bind(BindRspFormat_t *msg) {
+uint8_t mtZdoBindRspCb(BindRspFormat_t *msg) {
 	if (msg->Status != MT_RPC_SUCCESS) {
 		return msg->Status;
 	}
 	printf("BIND: %04X\n", msg->SrcAddr);
+	Node_t *node = zbFindNodeByAddress(msg->SrcAddr);
+	if (node == NULL) {
+		return MT_RPC_SUCCESS;
+	}
+	uint8_t iEndpoint;
+	for (iEndpoint = 0; iEndpoint < node->EndpointCount; iEndpoint++) {
+		Endpoint_t *endpoint = &node->Endpoints[iEndpoint];
+		endpoint->C06Bind = true;
+		endpoint->C06BindRetry = ZB_OK;
+	}
 	return MT_RPC_SUCCESS;
 }
 
@@ -401,13 +411,13 @@ uint8_t zbRepairNode(Node_t *node, bool reset) {
 			SimpleDescReqFormat_t req = { .DstAddr = node->Address, .NwkAddrOfInterest = node->Address, .Endpoint = endpoint->Endpoint };
 			RUN(zdoSimpleDescReq, req)
 		}
-		if(endpoint->SimpleDescriptorRetry != ZB_OK){
+		if (endpoint->SimpleDescriptorRetry != ZB_OK) {
 			break;
 		}
-		if(endpoint->C06Exists == ZB_OK){
+		if (endpoint->C06Exists == ZB_OK) {
 			if (endpoint->C06ValueRetry != ZB_OK && endpoint->C06ValueRetry != ZB_KO) {
 				endpoint->C06ValueRetry++;
-				DataRequestFormat_t req = { .ClusterID = 0x06, .DstAddr = node->Address, .DstEndpoint = endpoint->Endpoint, .SrcEndpoint = 1, .Len = 5, .Options = 0, .Radius = 0, .TransID = 1 };
+				DataRequestFormat_t req = { .DstAddr = node->Address, .ClusterID = 0x06, .DstEndpoint = endpoint->Endpoint, .SrcEndpoint = 1, .Len = 5, .Options = 0, .Radius = 0, .TransID = 1 };
 				req.Data[0] = 0x00;
 				req.Data[1] = (af_counter++) % 255;
 				req.Data[2] = 0x00;
@@ -417,7 +427,9 @@ uint8_t zbRepairNode(Node_t *node, bool reset) {
 			}
 			if (endpoint->C06BindRetry != ZB_OK && endpoint->C06BindRetry != ZB_KO) {
 				endpoint->C06BindRetry++;
-				BindReqFormat_t req = { .ClusterID = 0x06, .DstAddr = system.short_addr, .DstEndpoint = 1, .SrcEndpoint = endpoint->Endpoint, .SrcAddress = node->Address };
+				BindReqFormat_t req = { .DstAddr = node->Address, .ClusterID = 0x06, .DstEndpoint = 1, .SrcEndpoint = endpoint->Endpoint, .DstAddrMode = 0x03 };
+				memcpy(req.SrcAddress, &node->IEEE, 8);
+				memcpy(req.DstAddress, &system.ieee_addr, 8);
 				RUN(zdoBindReq, req)
 			}
 		}
@@ -437,7 +449,7 @@ uint8_t zbRepair(Fake_t *f) {
 	return MT_RPC_SUCCESS;
 }
 
-uint8_t zb_af_incoming_msg_cmd01_c00(IncomingMsgFormat_t *msg) {
+uint8_t mtAfIncomingMsgCb_CMD01_ReadAttribute_CLU00_Basic(IncomingMsgFormat_t *msg) {
 	Node_t *node = zbFindNodeByAddress(msg->SrcAddr);
 	uint8_t j = 3;
 	while (j + 2 < msg->Len) {
@@ -464,7 +476,7 @@ uint8_t zb_af_incoming_msg_cmd01_c00(IncomingMsgFormat_t *msg) {
 	return MT_RPC_SUCCESS;;
 }
 
-uint8_t zb_af_incoming_msg_cmd01_c06(IncomingMsgFormat_t *msg) {
+uint8_t mtAfIncomingMsgCb_CMD01_ReadAttribute_CLU06_OnOff(IncomingMsgFormat_t *msg) {
 	Node_t *node = zbFindNodeByAddress(msg->SrcAddr);
 	uint8_t j = 3;
 	while (j + 2 < msg->Len) {
@@ -483,22 +495,23 @@ uint8_t zb_af_incoming_msg_cmd01_c06(IncomingMsgFormat_t *msg) {
 	return MT_RPC_SUCCESS;
 }
 
-uint8_t zb_af_incoming_msg_cmd01(IncomingMsgFormat_t *msg) {
+uint8_t mtAfIncomingMsgCb_CMD01_ReadAttribute(IncomingMsgFormat_t *msg) {
 	switch (msg->ClusterId) {
 	case 0:
-		zb_af_incoming_msg_cmd01_c00(msg);
+		mtAfIncomingMsgCb_CMD01_ReadAttribute_CLU00_Basic(msg);
 		break;
 	case 6:
-		zb_af_incoming_msg_cmd01_c06(msg);
+		mtAfIncomingMsgCb_CMD01_ReadAttribute_CLU06_OnOff(msg);
 		break;
 	}
 	return MT_RPC_SUCCESS;
 }
-uint8_t zb_af_incoming_msg(IncomingMsgFormat_t *msg) {
-	xTimerReset(xTimer, 0);
+
+uint8_t mtAfIncomingMsgCb(IncomingMsgFormat_t *msg) {
 	switch (msg->Data[2]) {
 	case 0x01:
-		zb_af_incoming_msg_cmd01(msg);
+	case 0x0A:
+		mtAfIncomingMsgCb_CMD01_ReadAttribute(msg);
 		break;
 	}
 	return MT_RPC_SUCCESS;

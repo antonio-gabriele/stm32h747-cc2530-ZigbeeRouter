@@ -115,10 +115,16 @@ uint8_t appTick() {
 
 static int32_t app_register_af(void) {
 	int32_t status = 0;
-	RegisterFormat_t reg = { .EndPoint = 1, .AppProfId = 0x0104, //
-			.AppDeviceId = 0x0100, .AppDevVer = 1, //
-			.LatencyReq = 0, .AppNumInClusters = 1, //
-			.AppInClusterList[0] = 0x0006, .AppNumOutClusters = 0 };
+	RegisterFormat_t reg = {
+			.EndPoint = 1, //
+			.AppProfId = 0x0104, //
+			.AppDeviceId = 0x0100, //
+			.AppDevVer = 1, //
+			.LatencyReq = 0, //
+			.AppNumInClusters = 1, //
+			.AppInClusterList[0] = 0x0006, //
+			.AppNumOutClusters = 1, //
+			.AppOutClusterList[0] = 0x0006 };
 	status = afRegister(&reg);
 	return status;
 }

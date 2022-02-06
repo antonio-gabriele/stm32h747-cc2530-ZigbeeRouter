@@ -15,6 +15,12 @@
 #define ZB_RE (0xFF-0x08)
 /********************************************************************************/
 /********************************************************************************/
+typedef union {
+  uint64_t u64;
+  uint8_t b8[sizeof(uint64_t)];
+} IEEE;
+/********************************************************************************/
+/********************************************************************************/
 void zbInit();
 uint8_t zbStartScan(Fake_t*);
 /********************************************************************************/
@@ -31,9 +37,9 @@ uint8_t mtZdoSimpleDescRspCb(SimpleDescRspFormat_t*);
 uint8_t mtZdoEndDeviceAnnceIndCb(EndDeviceAnnceIndFormat_t*);
 uint8_t mtZdoActiveEpRspCb(ActiveEpRspFormat_t*);
 uint8_t mtSysResetIndCb(ResetIndFormat_t*);
-uint8_t zb_af_incoming_msg(IncomingMsgFormat_t*);
+uint8_t mtAfIncomingMsgCb(IncomingMsgFormat_t*);
 uint8_t mtZdoIeeeAddrRspCb(IeeeAddrRspFormat_t*);
-uint8_t zb_zdo_bind(BindRspFormat_t*);
+uint8_t mtZdoBindRspCb(BindRspFormat_t*);
 uint8_t pfnUtilGetDeviceInfoCb(utilGetDeviceInfoFormat_t*);
 Node_t* zbFindNodeByAddress(uint16_t);
 Node_t* zbFindNodeByIEEE(uint64_t);
