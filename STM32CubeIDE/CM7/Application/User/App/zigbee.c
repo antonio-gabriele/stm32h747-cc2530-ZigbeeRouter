@@ -25,7 +25,7 @@ mtAfCb_t mtAfCb = { .pfnAfDataConfirm = NULL, //
 		};
 mtSysCb_t mtSysCb = { NULL, NULL, NULL, mtSysResetIndCb, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
 mtZdoCb_t mtZdoCb = { NULL,       // MT_ZDO_NWK_ADDR_RSP
-		mtZdoIeeeAddrRspCb,      // MT_ZDO_IEEE_ADDR_RSP
+		NULL,      // MT_ZDO_IEEE_ADDR_RSP
 		NULL,      // MT_ZDO_NODE_DESC_RSP
 		NULL,     // MT_ZDO_POWER_DESC_RSP
 		mtZdoSimpleDescRspCb,    // MT_ZDO_SIMPLE_DESC_RSP
@@ -87,19 +87,19 @@ uint8_t mtZdoActiveEpRspCb(ActiveEpRspFormat_t *msg) {
 		return msg->Status;
 	}
 	Node_t *node = zbFindNodeByAddress(msg->NwkAddr);
-	if (node->ActiveEndpointRetry == ZB_OK) {
+	if (node->ActiveEndpointRetry == ZB1_OK) {
 		zbRepairNode(node, true);
 		return MT_RPC_SUCCESS;
 	}
 	printf("AEND: %04X -> %d", msg->NwkAddr, msg->Status);
-	node->ActiveEndpointRetry = ZB_OK;
+	node->ActiveEndpointRetry = ZB1_OK;
 	node->EndpointCount = msg->ActiveEPCount;
 	uint32_t i;
 	for (i = 0; i < msg->ActiveEPCount; i++) {
 		uint8_t endpoint = msg->ActiveEPList[i];
 		node->Endpoints[i].Endpoint = endpoint;
-		node->Endpoints[i].SimpleDescriptorRetry = ZB_RE;
-		node->Endpoints[i].C06Exists = ZB_KO;
+		node->Endpoints[i].SimpleDescriptorRetry = ZB1_RE;
+		node->Endpoints[i].C06Exists = ZB1_KO;
 		printf(" %d", endpoint);
 	}
 	printf("\n");
@@ -116,28 +116,15 @@ uint8_t mtZdoEndDeviceAnnceIndCb(EndDeviceAnnceIndFormat_t *msg) {
 		if (node == NULL) {
 			node = &sys_cfg.Nodes[sys_cfg.NodesCount];
 			sys_cfg.NodesCount++;
-			node->LqiRetry = ZB_RE;
-			node->NameRetry = ZB_RE;
-			node->ActiveEndpointRetry = ZB_RE;
+			node->LqiRetry = ZB1_RE;
+			node->NameRetry = ZB1_RE;
+			node->ActiveEndpointRetry = ZB1_RE;
 			node->ManufacturerName[0] = 0;
 			node->ModelIdentifier[0] = 0;
 		}
-		node->IEEERetry = ZB_OK;
 		node->Address = msg->NwkAddr;
 		node->IEEE = msg->IEEEAddr;
 	}
-	zbRepairNode(node, true);
-	return MT_RPC_SUCCESS;
-}
-uint8_t mtZdoIeeeAddrRspCb(IeeeAddrRspFormat_t *msg) {
-	xTimerReset(xTimer, 0);
-	if (msg->Status != MT_RPC_SUCCESS) {
-		return msg->Status;
-	}
-	Node_t *node = zbFindNodeByAddress(msg->NwkAddr);
-	printf("IEEE: %04X -> %llu \n", msg->NwkAddr, msg->IEEEAddr);
-	node->IEEE = msg->IEEEAddr;
-	node->IEEERetry = ZB_OK;
 	zbRepairNode(node, true);
 	return MT_RPC_SUCCESS;
 }
@@ -153,7 +140,7 @@ uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t *msg) {
 	}
 	if (msg->StartIndex + msg->NeighborLqiListCount == msg->NeighborTableEntries) {
 		Node_t *node = zbFindNodeByAddress(msg->SrcAddr);
-		node->LqiRetry = ZB_OK;
+		node->LqiRetry = ZB1_OK;
 		zbRepairNode(node, true);
 	}
 	uint32_t iNeighbor = 0;
@@ -165,13 +152,12 @@ uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t *msg) {
 			printf("RLQI: %04X <- Welcome\n", address);
 			node = &sys_cfg.Nodes[sys_cfg.NodesCount];
 			sys_cfg.NodesCount++;
-			node->LqiRetry = ZB_RE;
-			node->ActiveEndpointRetry = ZB_RE;
-			node->IEEERetry = ZB_RE;
-			node->NameRetry = ZB_RE;
+			node->LqiRetry = ZB1_RE;
+			node->ActiveEndpointRetry = ZB1_RE;
+			node->NameRetry = ZB1_RE;
 			node->Address = address;
 			node->EndpointCount = 0;
-			node->IEEE = 0;
+			node->IEEE = msg->NeighborLqiList[iNeighbor].ExtendedAddress;
 			node->ManufacturerName[0] = 0;
 			node->ModelIdentifier[0] = 0;
 			zbRepairNode(node, true);
@@ -190,21 +176,21 @@ uint8_t mtZdoSimpleDescRspCb(SimpleDescRspFormat_t *msg) {
 		return MT_RPC_SUCCESS;
 	}
 	Endpoint_t *endpoint = zbFindEndpoint(node, msg->Endpoint);
-	if (endpoint == NULL || endpoint->SimpleDescriptorRetry == ZB_OK) {
+	if (endpoint == NULL || endpoint->SimpleDescriptorRetry == ZB1_OK) {
 		return MT_RPC_SUCCESS;
 	}
 	if (msg->Endpoint == 0) {
-		endpoint->SimpleDescriptorRetry = ZB_KO;
+		endpoint->SimpleDescriptorRetry = ZB1_KO;
 		return msg->Status;
 	}
-	endpoint->SimpleDescriptorRetry = ZB_OK;
+	endpoint->SimpleDescriptorRetry = ZB1_OK;
 	uint32_t i;
 	for (i = 0; i < msg->NumInClusters; i++) {
 		if (msg->InClusterList[i] == 0x06) {
 			printf("SDES.06: %04X.%d -> %d\n", msg->NwkAddr, msg->Endpoint, msg->Status);
-			endpoint->C06Exists = ZB_OK;
-			endpoint->C06BindRetry = ZB_RE;
-			endpoint->C06ValueRetry = ZB_RE;
+			endpoint->C06Exists = ZB1_OK;
+			endpoint->C06BindRetry = ZB1_RE;
+			endpoint->C06ValueRetry = ZB1_RE;
 		}
 	}
 	zbRepairNode(node, true);
@@ -266,7 +252,7 @@ uint8_t mtZdoBindRspCb(BindRspFormat_t *msg) {
 	for (iEndpoint = 0; iEndpoint < node->EndpointCount; iEndpoint++) {
 		Endpoint_t *endpoint = &node->Endpoints[iEndpoint];
 		endpoint->C06Bind = true;
-		endpoint->C06BindRetry = ZB_OK;
+		endpoint->C06BindRetry = ZB1_OK;
 	}
 	return MT_RPC_SUCCESS;
 }
@@ -276,33 +262,30 @@ uint8_t zbCount(Summary_t *summary) {
 	for (iNode = 0; iNode < sys_cfg.NodesCount; iNode++) {
 		Node_t *node = &sys_cfg.Nodes[iNode];
 		summary->nNodes++;
-		if (node->ActiveEndpointRetry == ZB_OK) {
+		if (node->ActiveEndpointRetry == ZB1_OK) {
 			summary->nNodesAEOk++;
 		}
-		if (node->IEEERetry == ZB_OK) {
-			summary->nNodesIEEEOk++;
-		}
-		if (node->LqiRetry == ZB_OK) {
+		if (node->LqiRetry == ZB1_OK) {
 			summary->nNodesLQOk++;
 		}
-		if (node->NameRetry == ZB_OK) {
+		if (node->NameRetry == ZB1_OK) {
 			summary->nNodesNameOk++;
 		}
 		uint8_t iEndpoint;
 		summary->nEndpoints += node->EndpointCount;
 		for (iEndpoint = 0; iEndpoint < node->EndpointCount; iEndpoint++) {
 			Endpoint_t *endpoint = &node->Endpoints[iEndpoint];
-			if (endpoint->SimpleDescriptorRetry == ZB_OK) {
+			if (endpoint->SimpleDescriptorRetry == ZB1_OK) {
 				summary->nEndpointsSDOk++;
 			}
-			if (endpoint->SimpleDescriptorRetry != ZB_OK) {
+			if (endpoint->SimpleDescriptorRetry != ZB1_OK) {
 				break;
 			}
-			if (endpoint->C06Exists == ZB_OK) {
-				if (endpoint->C06BindRetry == ZB_OK) {
+			if (endpoint->C06Exists == ZB1_OK) {
+				if (endpoint->C06BindRetry == ZB1_OK) {
 					summary->nEndpointsBindOk++;
 				}
-				if (endpoint->C06ValueRetry == ZB_OK) {
+				if (endpoint->C06ValueRetry == ZB1_OK) {
 					summary->nEndpointsValueOk++;
 				}
 			}
@@ -317,14 +300,13 @@ uint8_t zbStartScan(Fake_t *f) {
 		if (node == NULL) {
 			node = &sys_cfg.Nodes[sys_cfg.NodesCount];
 			sys_cfg.NodesCount++;
-			node->LqiRetry = ZB_RE;
-			node->NameRetry = ZB_OK;
-			node->ActiveEndpointRetry = ZB_RE;
+			node->LqiRetry = ZB1_RE;
+			node->ActiveEndpointRetry = ZB1_OK;
 			strcpy(node->ManufacturerName, "Antonio Gabriele");
 			strcpy(node->ModelIdentifier, "Fire.v1.0");
-			node->IEEERetry = ZB_OK;
-			node->Address = system.short_addr;
+			node->NameRetry = ZB1_OK;
 			node->IEEE = system.ieee_addr;
+			node->Address = system.short_addr;
 		}
 		{
 			MgmtLqiReqFormat_t req = { .DstAddr = system.short_addr, .StartIndex = 0 };
@@ -336,10 +318,9 @@ uint8_t zbStartScan(Fake_t *f) {
 		if (node == NULL) {
 			node = &sys_cfg.Nodes[sys_cfg.NodesCount];
 			sys_cfg.NodesCount++;
-			node->LqiRetry = ZB_RE;
-			node->NameRetry = ZB_RE;
-			node->ActiveEndpointRetry = ZB_RE;
-			node->IEEERetry = ZB_RE;
+			node->LqiRetry = ZB1_RE;
+			node->NameRetry = ZB1_OK;
+			node->ActiveEndpointRetry = ZB1_OK;
 			node->Address = 0;
 		}
 		{
@@ -353,43 +334,33 @@ uint8_t zbStartScan(Fake_t *f) {
 uint8_t zbRepairNode(Node_t *node, bool reset) {
 	uint8_t iEndpoint;
 	if (reset) {
-		if (node->LqiRetry == ZB_KO)
-			node->LqiRetry = ZB_RE;
-		if (node->IEEERetry == ZB_KO)
-			node->IEEERetry = ZB_RE;
-		if (node->ActiveEndpointRetry == ZB_KO)
-			node->ActiveEndpointRetry = ZB_RE;
-		if (node->NameRetry == ZB_KO)
-			node->NameRetry = ZB_RE;
+		if (node->LqiRetry == ZB1_KO)
+			node->LqiRetry = ZB1_RE;
+		if (node->ActiveEndpointRetry == ZB1_KO)
+			node->ActiveEndpointRetry = ZB1_RE;
+		if (node->NameRetry == ZB1_KO)
+			node->NameRetry = ZB1_RE;
 		for (iEndpoint = 0; iEndpoint < node->EndpointCount; iEndpoint++) {
 			Endpoint_t *endpoint = &node->Endpoints[iEndpoint];
-			if (endpoint->SimpleDescriptorRetry == ZB_KO)
-				endpoint->SimpleDescriptorRetry = ZB_RE;
-			if (endpoint->C06ValueRetry == ZB_KO)
-				endpoint->C06ValueRetry = ZB_RE;
-			if (endpoint->C06BindRetry == ZB_KO)
-				endpoint->C06BindRetry = ZB_RE;
+			if (endpoint->SimpleDescriptorRetry == ZB1_KO)
+				endpoint->SimpleDescriptorRetry = ZB1_RE;
+			if (endpoint->C06ValueRetry == ZB1_KO)
+				endpoint->C06ValueRetry = ZB1_RE;
+			if (endpoint->C06BindRetry == ZB1_KO)
+				endpoint->C06BindRetry = ZB1_RE;
 		}
 	}
-	if (node->LqiRetry != ZB_OK && node->LqiRetry != ZB_KO) {
-		node->LqiRetry++;
+	if (node->LqiRetry != ZB1_OK && node->LqiRetry != ZB1_KO) {
+		node->LqiRetry--;
 		MgmtLqiReqFormat_t req = { .DstAddr = node->Address, .StartIndex = 0 };
 		RUN(zdoMgmtLqiReq, req)
 	}
-	if (node->IEEERetry != ZB_OK && node->IEEERetry != ZB_KO) {
-		node->IEEERetry++;
-		IeeeAddrReqFormat_t req = { .ShortAddr = node->Address, .ReqType = 0, .StartIndex = 0 };
-		RUN(zdoIeeeAddrReq, req)
-	}
-	if (node->IEEERetry != ZB_OK) {
-		return MT_RPC_SUCCESS;
-	}
-	if (node->ActiveEndpointRetry != ZB_OK && node->ActiveEndpointRetry != ZB_KO) {
-		node->ActiveEndpointRetry++;
+	if (node->ActiveEndpointRetry != ZB1_OK && node->ActiveEndpointRetry != ZB1_KO) {
+		node->ActiveEndpointRetry--;
 		ActiveEpReqFormat_t req = { .DstAddr = node->Address, .NwkAddrOfInterest = node->Address };
 		RUN(zdoActiveEpReq, req)
 	}
-	if (node->NameRetry != ZB_OK && node->NameRetry != ZB_KO) {
+	if (node->NameRetry != ZB1_OK && node->NameRetry != ZB1_KO) {
 		node->NameRetry++;
 		DataRequestFormat_t req = { .ClusterID = 0, .DstAddr = node->Address, .DstEndpoint = 1, .SrcEndpoint = 1, .Len = 7, .Options = 0, .Radius = 0, .TransID = 1 };
 		req.Data[0] = 0; //ZCL->1
@@ -401,22 +372,22 @@ uint8_t zbRepairNode(Node_t *node, bool reset) {
 		req.Data[6] = 0x00;
 		RUN(afDataRequest, req)
 	}
-	if (node->ActiveEndpointRetry != ZB_OK) {
+	if (node->ActiveEndpointRetry != ZB1_OK) {
 		return MT_RPC_SUCCESS;
 	}
 	for (iEndpoint = 0; iEndpoint < node->EndpointCount; iEndpoint++) {
 		Endpoint_t *endpoint = &node->Endpoints[iEndpoint];
-		if (endpoint->SimpleDescriptorRetry != ZB_OK && endpoint->SimpleDescriptorRetry != ZB_KO) {
-			endpoint->SimpleDescriptorRetry++;
+		if (endpoint->SimpleDescriptorRetry != ZB1_OK && endpoint->SimpleDescriptorRetry != ZB1_KO) {
+			endpoint->SimpleDescriptorRetry--;
 			SimpleDescReqFormat_t req = { .DstAddr = node->Address, .NwkAddrOfInterest = node->Address, .Endpoint = endpoint->Endpoint };
 			RUN(zdoSimpleDescReq, req)
 		}
-		if (endpoint->SimpleDescriptorRetry != ZB_OK) {
+		if (endpoint->SimpleDescriptorRetry != ZB1_OK) {
 			break;
 		}
-		if (endpoint->C06Exists == ZB_OK) {
-			if (endpoint->C06ValueRetry != ZB_OK && endpoint->C06ValueRetry != ZB_KO) {
-				endpoint->C06ValueRetry++;
+		if (endpoint->C06Exists == ZB1_OK) {
+			if (endpoint->C06ValueRetry != ZB1_OK && endpoint->C06ValueRetry != ZB1_KO) {
+				endpoint->C06ValueRetry--;
 				DataRequestFormat_t req = { .DstAddr = node->Address, .ClusterID = 0x06, .DstEndpoint = endpoint->Endpoint, .SrcEndpoint = 1, .Len = 5, .Options = 0, .Radius = 0, .TransID = 1 };
 				req.Data[0] = 0x00;
 				req.Data[1] = (af_counter++) % 255;
@@ -425,8 +396,8 @@ uint8_t zbRepairNode(Node_t *node, bool reset) {
 				req.Data[4] = 0x00;
 				RUN(afDataRequest, req)
 			}
-			if (endpoint->C06BindRetry != ZB_OK && endpoint->C06BindRetry != ZB_KO) {
-				endpoint->C06BindRetry++;
+			if (endpoint->C06BindRetry != ZB1_OK && endpoint->C06BindRetry != ZB1_KO) {
+				endpoint->C06BindRetry--;
 				BindReqFormat_t req = { .DstAddr = node->Address, .ClusterID = 0x06, .DstEndpoint = 1, .SrcEndpoint = endpoint->Endpoint, .DstAddrMode = 0x03 };
 				memcpy(req.SrcAddress, &node->IEEE, 8);
 				memcpy(req.DstAddress, &system.ieee_addr, 8);
@@ -449,8 +420,7 @@ uint8_t zbRepair(Fake_t *f) {
 	return MT_RPC_SUCCESS;
 }
 
-uint8_t mtAfIncomingMsgCb_CMD01_ReadAttribute_CLU00_Basic(IncomingMsgFormat_t *msg) {
-	Node_t *node = zbFindNodeByAddress(msg->SrcAddr);
+uint8_t mt_ReadA_Basic(Node_t *node, IncomingMsgFormat_t *msg) {
 	uint8_t j = 3;
 	while (j + 2 < msg->Len) {
 		uint16_t currentAttributeId = msg->Data[j++];
@@ -469,15 +439,14 @@ uint8_t mtAfIncomingMsgCb_CMD01_ReadAttribute_CLU00_Basic(IncomingMsgFormat_t *m
 					node->ModelIdentifier[strlen] = 0;
 				}
 				j += strlen;
-				node->NameRetry = ZB_OK;
+				node->NameRetry = ZB1_OK;
 			}
 		}
 	}
 	return MT_RPC_SUCCESS;;
 }
 
-uint8_t mtAfIncomingMsgCb_CMD01_ReadAttribute_CLU06_OnOff(IncomingMsgFormat_t *msg) {
-	Node_t *node = zbFindNodeByAddress(msg->SrcAddr);
+uint8_t mt_ReadA_OnOff(Node_t *node, IncomingMsgFormat_t *msg) {
 	uint8_t j = 3;
 	while (j + 2 < msg->Len) {
 		uint16_t currentAttributeId = msg->Data[j++];
@@ -487,7 +456,7 @@ uint8_t mtAfIncomingMsgCb_CMD01_ReadAttribute_CLU06_OnOff(IncomingMsgFormat_t *m
 			uint8_t zigbeeType = msg->Data[j++];
 			if (zigbeeType == 16) {
 				Endpoint_t *endpoint = zbFindEndpoint(node, msg->SrcEndpoint);
-				endpoint->C06ValueRetry = ZB_OK;
+				endpoint->C06ValueRetry = ZB1_OK;
 				endpoint->C06Value = msg->Data[j++];
 			}
 		}
@@ -495,23 +464,65 @@ uint8_t mtAfIncomingMsgCb_CMD01_ReadAttribute_CLU06_OnOff(IncomingMsgFormat_t *m
 	return MT_RPC_SUCCESS;
 }
 
-uint8_t mtAfIncomingMsgCb_CMD01_ReadAttribute(IncomingMsgFormat_t *msg) {
+uint8_t mt_ReadA(Node_t *node, IncomingMsgFormat_t *msg) {
 	switch (msg->ClusterId) {
 	case 0:
-		mtAfIncomingMsgCb_CMD01_ReadAttribute_CLU00_Basic(msg);
+		mt_ReadA_Basic(node, msg);
 		break;
 	case 6:
-		mtAfIncomingMsgCb_CMD01_ReadAttribute_CLU06_OnOff(msg);
+		mt_ReadA_OnOff(node, msg);
+		break;
+	}
+	return MT_RPC_SUCCESS;
+}
+
+uint8_t mt_RepA_OnOff(Node_t *node, IncomingMsgFormat_t *msg) {
+	uint8_t j = 3;
+	while (j + 2 < msg->Len) {
+		uint16_t currentAttributeId = msg->Data[j++];
+		currentAttributeId |= msg->Data[j++] << 8;
+		uint8_t success = msg->Data[j++];
+		if (success == 0) {
+			uint8_t zigbeeType = msg->Data[j++];
+			if (zigbeeType == 16) {
+				Endpoint_t *endpoint = zbFindEndpoint(node, msg->SrcEndpoint);
+				endpoint->C06ValueRetry = ZB1_OK;
+				endpoint->C06Value = msg->Data[j++];
+			}
+		}
+	}
+	return MT_RPC_SUCCESS;
+}
+
+uint8_t mt_RepA(Node_t *node, IncomingMsgFormat_t *msg) {
+	switch (msg->ClusterId) {
+	case 0x06: {
+		uint8_t j = 3;
+		uint16_t currentAttributeId = msg->Data[j++];
+		currentAttributeId |= msg->Data[j++] << 8;
+		uint8_t zigbeeType = msg->Data[j++];
+		if (zigbeeType == 16) {
+			Endpoint_t *endpoint = zbFindEndpoint(node, msg->SrcEndpoint);
+			endpoint->C06ValueRetry = ZB1_OK;
+			endpoint->C06Value = msg->Data[j++];
+		}
+	}
 		break;
 	}
 	return MT_RPC_SUCCESS;
 }
 
 uint8_t mtAfIncomingMsgCb(IncomingMsgFormat_t *msg) {
+	Node_t *node = zbFindNodeByAddress(msg->SrcAddr);
+	if (node == NULL) {
+		return MT_RPC_SUCCESS;
+	}
 	switch (msg->Data[2]) {
 	case 0x01:
+		mt_ReadA(node, msg);
+		break;
 	case 0x0A:
-		mtAfIncomingMsgCb_CMD01_ReadAttribute(msg);
+		mt_RepA(node, msg);
 		break;
 	}
 	return MT_RPC_SUCCESS;

@@ -10,9 +10,9 @@
 #include <application.h>
 #include <mtUtil.h>
 
-#define ZB_OK 0x00
-#define ZB_KO 0xFF
-#define ZB_RE (0xFF-0x08)
+#define ZB1_OK 0xFF
+#define ZB1_KO 0x00
+#define ZB1_RE (0x05)
 /********************************************************************************/
 /********************************************************************************/
 typedef union {

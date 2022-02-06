@@ -22,7 +22,6 @@ typedef struct {
 	uint8_t ActiveEndpointRetry;
 	uint16_t Address;
 	uint64_t IEEE;
-	uint8_t IEEERetry;
 	uint8_t Type;
 	uint8_t EndpointCount;
 	uint8_t NameRetry;
