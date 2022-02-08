@@ -19,11 +19,11 @@ void Device::refresh(){
 	char *mn = (char*) tuple->Node->ManufacturerName;
 	//char *mi = (char*) tuple->Node->ModelIdentifier;
 	uint8_t activeState = tuple->Endpoint->C06Value;
-	uint8_t bindState = tuple->Endpoint->C06Bind;
-	sprintf(caption, "%s %04X.%d (%d)(%d)", mn, tuple->Node->Address, tuple->Endpoint->Endpoint, activeState, bindState);
-	uint8_t length = strlen(caption) > BTNONOFFCAPTION_SIZE ? BTNONOFFCAPTION_SIZE : strlen(caption);
-	Unicode::strncpy(this->btnOnOffCaptionBuffer, caption, length);
+	sprintf(caption, "%s %04X.%d", mn, tuple->Node->Address, tuple->Endpoint->Endpoint);
+	//uint8_t length = strlen(caption) > BTNONOFFCAPTION_SIZE ? BTNONOFFCAPTION_SIZE : strlen(caption);
+	Unicode::strncpy(this->btnOnOffCaptionBuffer, caption, BTNONOFFCAPTION_SIZE);
 	this->btnOnOff.forceState(activeState);
+	this->btnOnOff.invalidate();
 	this->btnOnOffCaption.invalidate();
 }
 
@@ -32,7 +32,7 @@ void Device::btnOnOffClick() {
 	DataRequestFormat_t req;
 	req.ClusterID = 6;
 	req.DstAddr = this->tuple->Node->Address;
-	req.DstEndpoint = 1;
+	req.DstEndpoint = this->tuple->Endpoint->Endpoint;
 	req.SrcEndpoint = 1;
 	req.Len = 3;
 	req.Options = 0;
@@ -46,6 +46,8 @@ void Device::btnOnOffClick() {
 
 void Device::bind(Tuple1_t *tuple) {
 	this->tuple = tuple;
+	this->ieee = tuple->Node->IEEE;
+	this->endpoint = tuple->Endpoint->Endpoint;
 	this->refresh();
 }
 

@@ -17,7 +17,6 @@
 #include <system.h>
 #include "cmsis_os.h"
 #include "rpc.h"
-#include <queue.h>
 #include <timers.h>
 #include <zigbee.h>
 /**/
@@ -26,6 +25,12 @@
 #define QUEUE_LENGTH    64
 #define STACK_SIZE 		2048
 #define ITEM_SIZE       sizeof( struct AppMessage )
+/********************************************************************************/
+/********************************************************************************/
+#define QUEUEUI_LENGTH 4
+#define ITEMUI_SIZE sizeof(Tuple2_t)
+static StaticQueue_t xStaticQueueUI;
+static uint8_t ucQueueStorageAreaUI[QUEUEUI_LENGTH * ITEMUI_SIZE];
 /********************************************************************************/
 /********************************************************************************/
 TimerHandle_t xTimer;
@@ -41,6 +46,7 @@ static uint8_t ucQueueStorageArea[QUEUE_LENGTH * ITEM_SIZE];
 /********************************************************************************/
 /********************************************************************************/
 Configuration_t sys_cfg = { 0 };
+QueueHandle_t xQueueUI;
 QueueHandle_t xQueue;
 utilGetDeviceInfoFormat_t system;
 ResetReqFormat_t const_hard_rst = { .Type = 0 };
@@ -48,6 +54,7 @@ uint8_t bsum = 0;
 uint8_t machineState = 0;
 /********************************************************************************/
 void call_C_displayMessage(char *message);
+void call_C_refreshNodeEndpoint(Node_t *node, Endpoint_t *endpoint);
 /********************************************************************************/
 uint8_t appPrintf(const char *fmt, ...) {
 	char content[64];
@@ -88,12 +95,18 @@ uint8_t appRepair() {
 uint8_t appCount() {
 	Summary_t summary = { 0 };
 	zbCount(&summary);
-	uint8_t thumb = summary.nEndpoints + summary.nEndpointsSDOk + summary.nEndpointsBindOk + summary.nEndpointsValueOk + summary.nNodesNameOk + summary.nNodesAEOk + summary.nNodesIEEEOk + summary.nNodesLQOk + summary.nNodes;
+	uint8_t thumb = summary.nEndpoints + //
+			summary.nEndpointsSDOk + //
+			summary.nEndpointsBindOk + //
+			summary.nEndpointsValueOk + //
+			summary.nNodesNameOk + //
+			summary.nNodesAEOk + //
+			summary.nNodesLQOk + //
+			summary.nNodes;
 	if (bsum != thumb) {
-		appPrintf("ND:%d/AE:%d/IE:%d/LQ:%d/ID:%d-EP:%d/SD:%d/BN:%d/VL:%d", //
+		appPrintf("ND:%d/AE:%d/LQ:%d/ID:%d-EP:%d/SD:%d/BN:%d/VL:%d", //
 				summary.nNodes, //
 				summary.nNodesAEOk, //
-				summary.nNodesIEEEOk, //
 				summary.nNodesLQOk, //
 				summary.nNodesNameOk, //
 				summary.nEndpoints, //
@@ -195,6 +208,7 @@ void vTimerCallback(TimerHandle_t xTimer) {
 }
 
 uint8_t app_init(void *none) {
+	xQueueUI = xQueueCreateStatic(QUEUEUI_LENGTH, ITEMUI_SIZE, ucQueueStorageAreaUI, &xStaticQueueUI);
 	xQueue = xQueueCreateStatic(QUEUE_LENGTH, ITEM_SIZE, ucQueueStorageArea, &xStaticQueue);
 	xTimer = xTimerCreateStatic("Timer", pdMS_TO_TICKS(1000), pdFALSE, (void*) 0, vTimerCallback, &xTimerBuffer);
 	xTaskCreateStatic(vAppTask, "APP", STACK_SIZE, NULL, tskIDLE_PRIORITY, xStackApp, &xTaskBufferApp);

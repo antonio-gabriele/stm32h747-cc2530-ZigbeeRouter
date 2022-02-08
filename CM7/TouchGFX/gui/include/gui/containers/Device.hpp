@@ -13,6 +13,8 @@ public:
     virtual void initialize();
     virtual void btnOnOffClick();
     virtual void refresh();
+    uint64_t ieee;
+    uint8_t endpoint;
 private:
     Tuple1_t * tuple;
 protected:

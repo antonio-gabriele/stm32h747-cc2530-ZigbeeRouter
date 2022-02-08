@@ -40,7 +40,6 @@ typedef struct {
 typedef struct {
 	uint8_t nNodes;
 	uint8_t nNodesAEOk;
-	uint8_t nNodesIEEEOk;
 	uint8_t nNodesLQOk;
 	uint8_t nNodesNameOk;
 	uint8_t nEndpoints;
@@ -59,6 +58,11 @@ typedef struct {
 	Endpoint_t * Endpoint;
 	Node_t * Node;
 } Tuple1_t;
+
+typedef struct {
+	uint64_t IEEE;
+	uint8_t Endpoint;
+} Tuple2_t;
 
 #define MID_VW_LOG				0
 

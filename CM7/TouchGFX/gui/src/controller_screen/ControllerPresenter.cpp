@@ -17,4 +17,5 @@ void ControllerPresenter::deactivate() {
 }
 
 void ControllerPresenter::tick() {
+	this->view.tick();
 }

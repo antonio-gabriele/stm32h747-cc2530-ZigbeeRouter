@@ -229,6 +229,19 @@
               "ScreenTransitionType": "ScreenTransitionNone",
               "ActionComponent": "SD"
             }
+          },
+          {
+            "InteractionName": "btnScanClick2",
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "btnSscan"
+            },
+            "Action": {
+              "Type": "ActionGotoScreen",
+              "ScreenTransitionType": "ScreenTransitionSlide",
+              "ScreenTransitionDirection": "East",
+              "ActionComponent": "Controller"
+            }
           }
         ]
       },
@@ -263,7 +276,7 @@
             "Name": "deviceScrollList",
             "X": 170,
             "Y": 6,
-            "Width": 520,
+            "Width": 620,
             "Height": 468,
             "ItemTemplateName": "Device",
             "NumberofItems": 10,
@@ -402,15 +415,14 @@
     "CustomContainerDefinitions": [
       {
         "Name": "Device",
-        "Width": 520,
-        "Height": 58,
+        "Width": 620,
+        "Height": 60,
         "Components": [
           {
             "Type": "BoxWithBorder",
             "Name": "boxWithBorder",
-            "Y": 2,
-            "Width": 520,
-            "Height": 56,
+            "Width": 620,
+            "Height": 60,
             "Color": {
               "Red": 255,
               "Green": 255,
@@ -421,7 +433,7 @@
           {
             "Type": "ToggleButton",
             "Name": "btnOnOff",
-            "X": 7,
+            "X": 10,
             "Y": 11,
             "Width": 128,
             "Height": 38,
@@ -434,8 +446,8 @@
             "Name": "btnOnOffCaption",
             "X": 138,
             "Y": 18,
-            "Width": 370,
-            "Height": 24,
+            "Width": 466,
+            "Height": 25,
             "TextId": "__SingleUse_SBL7",
             "TextRotation": "0",
             "Wildcard1": {

@@ -12,7 +12,10 @@ public:
     virtual void setupScreen();
     virtual void tearDownScreen();
     virtual void deviceScrollListUpdateItem(Device&, int16_t);
+    virtual void tick();
 protected:
+private:
+    bool flg1;
 };
 
 #endif // CONTROLLERVIEW_HPP
