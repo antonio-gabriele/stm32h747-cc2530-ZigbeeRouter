@@ -6,6 +6,9 @@
 #include <stdio.h>
 #include <string.h>
 
+void MX_FATFS_DeInit(void);
+void MX_FATFS_Init(void);
+
 #define BUFFER_SIZE         ((uint32_t)0x2000)
 #define FLASH_ADDR 			((uint32_t)0x0050)
 #define WRITE_ADDR 			((uint32_t)(FLASH_ADDR * 0x2000))
@@ -26,6 +29,7 @@ uint8_t cfgRead(void *none) {
 }
 
 uint8_t cfgWrite(void *none) {
+	MX_FATFS_Init();
 	FATFS fs;
 	FRESULT res;
 	UINT bytesWritten;
@@ -97,5 +101,6 @@ uint8_t cfgWrite(void *none) {
 	if (res != FR_OK) {
 		return CFG_ERR;
 	}
+	MX_FATFS_DeInit();
 	return CFG_OK;
 }
