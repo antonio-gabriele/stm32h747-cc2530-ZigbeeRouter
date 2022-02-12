@@ -18,7 +18,7 @@ void HomePresenter::tick() {
 
 void HomePresenter::scan() {
 	void * req = NULL;
-	RUN(app_scanner, req)
+	RUN(appScanner, req)
 }
 
 void HomePresenter::start() {
@@ -27,7 +27,7 @@ void HomePresenter::start() {
 }
 
 void HomePresenter::reset(Fake_t devType) {
-	RUN(app_reset, devType)
+	RUN(appReset, devType)
 }
 
 void HomePresenter::activate() {

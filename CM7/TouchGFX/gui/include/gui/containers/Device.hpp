@@ -12,6 +12,7 @@ public:
     virtual void bind(Tuple1_t*);
     virtual void initialize();
     virtual void btnOnOffClick();
+    virtual void sliderValueConfirmed(int value);
     virtual void refresh();
     uint64_t ieee;
     uint8_t endpoint;

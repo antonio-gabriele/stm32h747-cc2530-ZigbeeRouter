@@ -14,17 +14,49 @@ Device::Device() {
 
 }
 
-void Device::refresh(){
-	char caption[64] = { 0 };
-	char *mn = (char*) tuple->Node->ManufacturerName;
-	//char *mi = (char*) tuple->Node->ModelIdentifier;
-	uint8_t activeState = tuple->Endpoint->C06Value;
-	sprintf(caption, "%s %04X.%d", mn, tuple->Node->Address, tuple->Endpoint->Endpoint);
-	//uint8_t length = strlen(caption) > BTNONOFFCAPTION_SIZE ? BTNONOFFCAPTION_SIZE : strlen(caption);
-	Unicode::strncpy(this->btnOnOffCaptionBuffer, caption, BTNONOFFCAPTION_SIZE);
-	this->btnOnOff.forceState(activeState);
-	this->btnOnOff.invalidate();
-	this->btnOnOffCaption.invalidate();
+void Device::refresh() {
+	{
+		char caption[64] = { 0 };
+		char *mn = (char*) tuple->Node->ManufacturerName;
+		sprintf(caption, "%s %04X.%d", mn, tuple->Node->Address, tuple->Endpoint->Endpoint);
+		Unicode::strncpy(this->btnOnOffCaptionBuffer, caption, BTNONOFFCAPTION_SIZE);
+		this->btnOnOffCaption.invalidate();
+	}
+	/**/
+	{
+		this->btnOnOff.setVisible(tuple->Endpoint->C06Exists);
+		bool activeState = tuple->Endpoint->C06Value;
+		this->btnOnOff.forceState(activeState);
+		this->btnOnOff.invalidate();
+	}
+	/**/
+	{
+		this->slider.setVisible(tuple->Endpoint->C08Exists);
+		uint8_t activeState = tuple->Endpoint->C08Value;
+		this->slider.setValue(activeState);
+		this->slider.invalidate();
+	}
+}
+
+void Device::sliderValueConfirmed(int value){
+	DataRequestFormat_t req;
+	req.ClusterID = 8;
+	req.DstAddr = this->tuple->Node->Address;
+	req.DstEndpoint = this->tuple->Endpoint->Endpoint;
+	req.SrcEndpoint = 1;
+	req.Len = 8;
+	req.Options = 0;
+	req.Radius = 0;
+	req.TransID = 1;
+	req.Data[0] = 0x1; //FrameControl
+	req.Data[1] = (af_counter++) % 255; //Sequence
+	req.Data[2] = 0x0; //CmdId
+	req.Data[3] = value; //CmdPayload
+	req.Data[4] = 0x0;
+	req.Data[5] = 0x0;
+	req.Data[6] = 0x0;
+	req.Data[7] = 0x0;
+	RUNNOW(afDataRequest, req);
 }
 
 void Device::btnOnOffClick() {
@@ -38,8 +70,8 @@ void Device::btnOnOffClick() {
 	req.Options = 0;
 	req.Radius = 0;
 	req.TransID = 1;
-	req.Data[0] = 1;
-	req.Data[1] = (af_counter++)%255;
+	req.Data[0] = 1; //FrameControl
+	req.Data[1] = (af_counter++) % 255; //Sequence
 	req.Data[2] = activeState; //CmdId
 	RUNNOW(afDataRequest, req);
 }

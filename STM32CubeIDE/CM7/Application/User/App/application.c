@@ -56,6 +56,8 @@ uint8_t machineState = 0;
 void call_C_displayMessage(char *message);
 void call_C_refreshNodeEndpoint(Node_t *node, Endpoint_t *endpoint);
 /********************************************************************************/
+void HAL_NVIC_SystemReset(void);
+/********************************************************************************/
 uint8_t appPrintf(const char *fmt, ...) {
 	char content[64];
 	va_list args;
@@ -66,7 +68,7 @@ uint8_t appPrintf(const char *fmt, ...) {
 	return 0;
 }
 
-uint8_t app_reset(Fake_t *devType) {
+uint8_t appReset(Fake_t *devType) {
 	uint8_t status = 0;
 	OsalNvWriteFormat_t req = { .Id = ZCD_NV_STARTUP_OPTION, .Offset = 0, .Len = 1, .Value = { 0x03 } };
 	status = sysOsalNvWrite(&req);
@@ -84,6 +86,8 @@ uint8_t app_reset(Fake_t *devType) {
 	vTaskDelay(4000);
 	sys_cfg.DeviceType = devType->u8;
 	sys_cfg.NodesCount = 0;
+	sys_cfg.Ready = 0;
+	HAL_NVIC_SystemReset();
 	return MT_RPC_SUCCESS;
 }
 
@@ -134,15 +138,15 @@ static int32_t app_register_af(void) {
 			.AppDeviceId = 0x0100, //
 			.AppDevVer = 1, //
 			.LatencyReq = 0, //
-			.AppNumInClusters = 1, //
-			.AppInClusterList[0] = 0x0006, //
-			.AppNumOutClusters = 1, //
-			.AppOutClusterList[0] = 0x0006 };
+			.AppNumInClusters = 0, //
+			.AppNumOutClusters = 2, //
+			.AppOutClusterList[0] = 0x6,
+			.AppOutClusterList[1] = 0x8 };
 	status = afRegister(&reg);
 	return status;
 }
 
-uint8_t app_scanner(void *none) {
+uint8_t appScanner(void *none) {
 	xTimerReset(xTimer, 0);
 	Fake_t req;
 	zbStartScan(&req);

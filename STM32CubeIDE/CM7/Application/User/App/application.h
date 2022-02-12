@@ -2,6 +2,7 @@
 #define APPLICATION_USER_CORE_APPTASK_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define MAX_NODES 64
 #define MAX_ENDPS 16
@@ -10,11 +11,15 @@
 typedef struct {
 	uint8_t Endpoint;
 	uint8_t SimpleDescriptorRetry;
-	uint8_t C06Exists;
-	uint8_t C06Value;
-	uint8_t C06Bind;
+	uint8_t Binding;
+	bool C06Exists;
+	bool C08Exists;
 	uint8_t C06ValueRetry;
+	uint8_t C08ValueRetry;
 	uint8_t C06BindRetry;
+	uint8_t C08BindRetry;
+	bool C06Value;
+	uint8_t C08Value;
 } Endpoint_t;
 
 typedef struct {
@@ -31,7 +36,7 @@ typedef struct {
 } Node_t;
 
 typedef struct {
-	uint8_t MagicNumber;
+	uint8_t Ready;
 	uint8_t DeviceType;
 	uint8_t NodesCount;
 	Node_t Nodes[MAX_NODES];
@@ -81,10 +86,10 @@ struct AppMessage {
 	char params[140];
 };
 
-uint8_t app_scanner(void *none);
+uint8_t appScanner(void *none);
 uint8_t appStartStack(void *none);
 uint8_t app_init(void *none);
-uint8_t app_reset(Fake_t *devType);
+uint8_t appReset(Fake_t *devType);
 uint8_t appRepair();
 uint8_t appPrintf(const char *fmt, ...);
 

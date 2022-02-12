@@ -67,7 +67,7 @@ void ControllerView::setupScreen() {
 		Node_t *node = &(sys_cfg.Nodes[iNode]);
 		for (int iEndpoint = 0; iEndpoint < node->EndpointCount; iEndpoint++) {
 			Endpoint_t *endpoint = &(node->Endpoints[iEndpoint]);
-			if (endpoint->C06Exists == ZB1_OK) {
+			if (endpoint->C06Exists == true || endpoint->C08Exists == true) {
 				Item[ItemsCount].Node = node;
 				Item[ItemsCount].Endpoint = endpoint;
 				ItemsCount++;

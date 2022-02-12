@@ -9,8 +9,8 @@
             "Name": "btnResetRtr",
             "Width": 170,
             "Height": 60,
-            "Pressed": "__designer\\Blue_Buttons_Round_Edge_small_pressed.png",
-            "Released": "__designer\\Blue_Buttons_Round_Edge_small.png",
+            "Pressed": "__designer\\Dark_Buttons_Round_Edge_small_pressed.png",
+            "Released": "__designer\\Dark_Buttons_Round_Edge_small.png",
             "TextId": "__SingleUse_K4HK",
             "ReleasedColor": {
               "Red": 255,
@@ -32,8 +32,8 @@
             "Y": 60,
             "Width": 170,
             "Height": 60,
-            "Pressed": "__designer\\Blue_Buttons_Round_Edge_small_pressed.png",
-            "Released": "__designer\\Blue_Buttons_Round_Edge_small.png",
+            "Pressed": "__designer\\Dark_Buttons_Round_Edge_small_pressed.png",
+            "Released": "__designer\\Dark_Buttons_Round_Edge_small.png",
             "TextId": "__SingleUse_JRER",
             "ReleasedColor": {
               "Red": 255,
@@ -74,8 +74,8 @@
             "Y": 120,
             "Width": 170,
             "Height": 60,
-            "Pressed": "__designer\\Blue_Buttons_Round_Edge_small_pressed.png",
-            "Released": "__designer\\Blue_Buttons_Round_Edge_small.png",
+            "Pressed": "__designer\\Dark_Buttons_Round_Edge_small_pressed.png",
+            "Released": "__designer\\Dark_Buttons_Round_Edge_small.png",
             "TextId": "__SingleUse_UX1N",
             "ReleasedColor": {
               "Red": 255,
@@ -97,8 +97,8 @@
             "Y": 180,
             "Width": 170,
             "Height": 60,
-            "Pressed": "__designer\\Blue_Buttons_Round_Edge_small_pressed.png",
-            "Released": "__designer\\Blue_Buttons_Round_Edge_small.png",
+            "Pressed": "__designer\\Dark_Buttons_Round_Edge_small_pressed.png",
+            "Released": "__designer\\Dark_Buttons_Round_Edge_small.png",
             "TextId": "__SingleUse_CJB7",
             "ReleasedColor": {
               "Red": 255,
@@ -120,8 +120,8 @@
             "Y": 420,
             "Width": 170,
             "Height": 60,
-            "Pressed": "__designer\\Blue_Buttons_Round_Edge_small_pressed.png",
-            "Released": "__designer\\Blue_Buttons_Round_Edge_small.png",
+            "Pressed": "__designer\\Dark_Buttons_Round_Edge_small_pressed.png",
+            "Released": "__designer\\Dark_Buttons_Round_Edge_small.png",
             "TextId": "__SingleUse_LL8U",
             "ReleasedColor": {
               "Red": 255,
@@ -143,8 +143,8 @@
             "Y": 360,
             "Width": 170,
             "Height": 60,
-            "Pressed": "__designer\\Blue_Buttons_Round_Edge_small_pressed.png",
-            "Released": "__designer\\Blue_Buttons_Round_Edge_small.png",
+            "Pressed": "__designer\\Dark_Buttons_Round_Edge_small_pressed.png",
+            "Released": "__designer\\Dark_Buttons_Round_Edge_small.png",
             "TextId": "__SingleUse_A6NR",
             "ReleasedColor": {
               "Red": 255,
@@ -254,8 +254,8 @@
             "Y": 420,
             "Width": 170,
             "Height": 60,
-            "Pressed": "__designer\\Blue_Buttons_Round_Edge_small_pressed.png",
-            "Released": "__designer\\Blue_Buttons_Round_Edge_small.png",
+            "Pressed": "__designer\\Dark_Buttons_Round_Edge_small_pressed.png",
+            "Released": "__designer\\Dark_Buttons_Round_Edge_small.png",
             "TextId": "__SingleUse_KX0N",
             "ReleasedColor": {
               "Red": 255,
@@ -274,10 +274,8 @@
           {
             "Type": "ScrollList",
             "Name": "deviceScrollList",
-            "X": 170,
-            "Y": 6,
-            "Width": 620,
-            "Height": 468,
+            "Width": 800,
+            "Height": 420,
             "ItemTemplateName": "Device",
             "NumberofItems": 10,
             "Easing": "Back",
@@ -311,8 +309,8 @@
             "Y": 210,
             "Width": 170,
             "Height": 60,
-            "Pressed": "__designer\\Blue_Buttons_Round_Edge_small_pressed.png",
-            "Released": "__designer\\Blue_Buttons_Round_Edge_small.png",
+            "Pressed": "__designer\\Dark_Buttons_Round_Edge_small_pressed.png",
+            "Released": "__designer\\Dark_Buttons_Round_Edge_small.png",
             "TextId": "__SingleUse_SPDV",
             "ReleasedColor": {
               "Red": 255,
@@ -334,8 +332,8 @@
             "Y": 150,
             "Width": 170,
             "Height": 60,
-            "Pressed": "__designer\\Blue_Buttons_Round_Edge_small_pressed.png",
-            "Released": "__designer\\Blue_Buttons_Round_Edge_small.png",
+            "Pressed": "__designer\\Dark_Buttons_Round_Edge_small_pressed.png",
+            "Released": "__designer\\Dark_Buttons_Round_Edge_small.png",
             "TextId": "__SingleUse_JP6P",
             "ReleasedColor": {
               "Red": 255,
@@ -357,8 +355,8 @@
             "Y": 270,
             "Width": 170,
             "Height": 60,
-            "Pressed": "__designer\\Blue_Buttons_Round_Edge_small_pressed.png",
-            "Released": "__designer\\Blue_Buttons_Round_Edge_small.png",
+            "Pressed": "__designer\\Dark_Buttons_Round_Edge_small_pressed.png",
+            "Released": "__designer\\Dark_Buttons_Round_Edge_small.png",
             "TextId": "__SingleUse_WFRR",
             "ReleasedColor": {
               "Red": 255,
@@ -415,45 +413,67 @@
     "CustomContainerDefinitions": [
       {
         "Name": "Device",
-        "Width": 620,
+        "Width": 800,
         "Height": 60,
         "Components": [
           {
             "Type": "BoxWithBorder",
             "Name": "boxWithBorder",
-            "Width": 620,
+            "Width": 800,
             "Height": 60,
             "Color": {
-              "Red": 255,
-              "Green": 255,
-              "Blue": 255
+              "Red": 100,
+              "Green": 100,
+              "Blue": 100
             },
             "BorderSize": 5
           },
           {
             "Type": "ToggleButton",
             "Name": "btnOnOff",
-            "X": 10,
+            "X": 306,
             "Y": 11,
             "Width": 128,
             "Height": 38,
-            "Pressed": "__designer\\Blue_Togglebars_Toggle_round_large_button_ON.png",
-            "Released": "__designer\\Blue_Togglebars_Toggle_round_large_button_OFF.png",
-            "Style": "Style4"
+            "Pressed": "__designer\\Dark_Togglebars_Toggle_large_button_On.png",
+            "Released": "__designer\\Dark_Togglebars_Toggle_large_button_Off.png",
+            "Style": "Style1"
           },
           {
             "Type": "TextArea",
             "Name": "btnOnOffCaption",
-            "X": 138,
-            "Y": 18,
-            "Width": 466,
-            "Height": 25,
+            "X": 11,
+            "Y": 12,
+            "Width": 290,
+            "Height": 36,
             "TextId": "__SingleUse_SBL7",
             "TextRotation": "0",
+            "Color": {
+              "Red": 255,
+              "Green": 255,
+              "Blue": 255
+            },
             "Wildcard1": {
               "UseBuffer": true,
               "BufferSize": 16
             }
+          },
+          {
+            "Type": "Slider",
+            "Name": "slider",
+            "X": 438,
+            "Y": 9,
+            "Width": 352,
+            "Height": 41,
+            "IsHorizontalSlider": true,
+            "BackgroundUnselected": "__designer\\Dark_Slider_Horizontal_Medium_Slider2_square_back.png",
+            "BackgroundSelected": "__designer\\Dark_Slider_Horizontal_Medium_Slider2_square_fill.png",
+            "Indicator": "__designer\\Dark_Slider_Horizontal_Medium_Indicators_Slider2_square_nob.png",
+            "IndicatorPos": 4,
+            "IndicatorMax": 295,
+            "IndicatorMin": 3,
+            "ValueMax": 255,
+            "Style": "Style12"
           }
         ],
         "Interactions": [
@@ -467,6 +487,17 @@
               "Type": "ActionCustom",
               "FunctionName": "btnOnOffClick"
             }
+          },
+          {
+            "InteractionName": "sliderValueConfirmed",
+            "Trigger": {
+              "Type": "TriggerSliderValueConfirmed",
+              "TriggerComponent": "slider"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "sliderValueConfirmed"
+            }
           }
         ]
       }
@@ -479,7 +510,7 @@
     "SelectedColorDepth": 24,
     "StartupScreenName": "Home",
     "SelectedStartupLanguage": "GB",
-    "Skin": "Blue",
+    "Skin": "Dark",
     "TouchGfxPath": "../Middlewares/ST/touchgfx",
     "UIPath": ".",
     "AvailableColorDepths": [

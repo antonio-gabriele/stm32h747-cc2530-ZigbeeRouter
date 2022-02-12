@@ -58,6 +58,7 @@ mtZdoCb_t mtZdoCb = { NULL,       // MT_ZDO_NWK_ADDR_RSP
 		NULL, NULL };
 /********************************************************************************/
 uint8_t af_counter = 0;
+bool repairReset = false;
 extern uint8_t machineState;
 extern utilGetDeviceInfoFormat_t system;
 /********************************************************************************/
@@ -99,7 +100,6 @@ uint8_t mtZdoActiveEpRspCb(ActiveEpRspFormat_t *msg) {
 		uint8_t endpoint = msg->ActiveEPList[i];
 		node->Endpoints[i].Endpoint = endpoint;
 		node->Endpoints[i].SimpleDescriptorRetry = ZB1_RE;
-		node->Endpoints[i].C06Exists = ZB1_KO;
 		printf(" %d", endpoint);
 	}
 	printf("\n");
@@ -196,6 +196,12 @@ uint8_t mtZdoSimpleDescRspCb(SimpleDescRspFormat_t *msg) {
 			endpoint->C06BindRetry = ZB1_RE;
 			endpoint->C06ValueRetry = ZB1_RE;
 		}
+		if (msg->InClusterList[i] == 0x8) {
+			printf("SDES.08: %04X.%d -> %d\n", msg->NwkAddr, msg->Endpoint, msg->Status);
+			endpoint->C08Exists = ZB1_OK;
+			endpoint->C08BindRetry = ZB1_RE;
+			endpoint->C08ValueRetry = ZB1_RE;
+		}
 	}
 	zbRepairNode(node, true);
 	return msg->Status;
@@ -255,8 +261,15 @@ uint8_t mtZdoBindRspCb(BindRspFormat_t *msg) {
 	uint8_t iEndpoint;
 	for (iEndpoint = 0; iEndpoint < node->EndpointCount; iEndpoint++) {
 		Endpoint_t *endpoint = &node->Endpoints[iEndpoint];
-		endpoint->C06Bind = true;
-		endpoint->C06BindRetry = ZB1_OK;
+		switch(endpoint->Binding){
+		case 0x6:
+			endpoint->C06BindRetry = ZB1_OK;
+			break;
+		case 0x8:
+			endpoint->C08BindRetry = ZB1_OK;
+			break;
+		}
+		endpoint->Binding = 0;
 	}
 	return MT_RPC_SUCCESS;
 }
@@ -281,17 +294,6 @@ uint8_t zbCount(Summary_t *summary) {
 			Endpoint_t *endpoint = &node->Endpoints[iEndpoint];
 			if (endpoint->SimpleDescriptorRetry == ZB1_OK) {
 				summary->nEndpointsSDOk++;
-			}
-			if (endpoint->SimpleDescriptorRetry != ZB1_OK) {
-				break;
-			}
-			if (endpoint->C06Exists == ZB1_OK) {
-				if (endpoint->C06BindRetry == ZB1_OK) {
-					summary->nEndpointsBindOk++;
-				}
-				if (endpoint->C06ValueRetry == ZB1_OK) {
-					summary->nEndpointsValueOk++;
-				}
 			}
 		}
 	}
@@ -332,6 +334,7 @@ uint8_t zbStartScan(Fake_t *f) {
 			RUN(zdoMgmtLqiReq, req)
 		}
 	}
+	repairReset = true;
 	return MT_RPC_SUCCESS;
 }
 
@@ -346,12 +349,15 @@ uint8_t zbRepairNode(Node_t *node, bool reset) {
 			node->NameRetry = ZB1_RE;
 		for (iEndpoint = 0; iEndpoint < node->EndpointCount; iEndpoint++) {
 			Endpoint_t *endpoint = &node->Endpoints[iEndpoint];
+			endpoint->Binding = 0;
 			if (endpoint->SimpleDescriptorRetry == ZB1_KO)
 				endpoint->SimpleDescriptorRetry = ZB1_RE;
 			if (endpoint->C06ValueRetry == ZB1_KO)
 				endpoint->C06ValueRetry = ZB1_RE;
 			if (endpoint->C06BindRetry == ZB1_KO)
 				endpoint->C06BindRetry = ZB1_RE;
+			if (endpoint->C08BindRetry == ZB1_KO)
+				endpoint->C08BindRetry = ZB1_RE;
 		}
 	}
 	if (node->LqiRetry != ZB1_OK && node->LqiRetry != ZB1_KO) {
@@ -389,7 +395,7 @@ uint8_t zbRepairNode(Node_t *node, bool reset) {
 		if (endpoint->SimpleDescriptorRetry != ZB1_OK) {
 			break;
 		}
-		if (endpoint->C06Exists == ZB1_OK) {
+		if (endpoint->C06Exists == true) {
 			if (endpoint->C06ValueRetry != ZB1_OK && endpoint->C06ValueRetry != ZB1_KO) {
 				endpoint->C06ValueRetry--;
 				DataRequestFormat_t req = { .DstAddr = node->Address, .ClusterID = 0x06, .DstEndpoint = endpoint->Endpoint, .SrcEndpoint = 1, .Len = 5, .Options = 0, .Radius = 0, .TransID = 1 };
@@ -400,9 +406,30 @@ uint8_t zbRepairNode(Node_t *node, bool reset) {
 				req.Data[4] = 0x00;
 				RUN(afDataRequest, req)
 			}
-			if (endpoint->C06BindRetry != ZB1_OK && endpoint->C06BindRetry != ZB1_KO) {
+			if (endpoint->Binding == 0 && endpoint->C06BindRetry != ZB1_OK && endpoint->C06BindRetry != ZB1_KO) {
+				endpoint->Binding = 0x6;
 				endpoint->C06BindRetry--;
-				BindReqFormat_t req = { .DstAddr = node->Address, .ClusterID = 0x06, .DstEndpoint = 1, .SrcEndpoint = endpoint->Endpoint, .DstAddrMode = 0x03 };
+				BindReqFormat_t req = { .DstAddr = node->Address, .ClusterID = 0x6, .DstEndpoint = 1, .SrcEndpoint = endpoint->Endpoint, .DstAddrMode = 0x03 };
+				memcpy(req.SrcAddress, &node->IEEE, 8);
+				memcpy(req.DstAddress, &system.ieee_addr, 8);
+				RUN(zdoBindReq, req)
+			}
+		}
+		if (endpoint->C08Exists == true) {
+			if (endpoint->C08ValueRetry != ZB1_OK && endpoint->C08ValueRetry != ZB1_KO) {
+				endpoint->C08ValueRetry--;
+				DataRequestFormat_t req = { .DstAddr = node->Address, .ClusterID = 0x8, .DstEndpoint = endpoint->Endpoint, .SrcEndpoint = 1, .Len = 5, .Options = 0, .Radius = 0, .TransID = 1 };
+				req.Data[0] = 0x00;
+				req.Data[1] = (af_counter++) % 255;
+				req.Data[2] = 0x00;
+				req.Data[3] = 0x00;
+				req.Data[4] = 0x00;
+				RUN(afDataRequest, req)
+			}
+			if (endpoint->Binding == 0 && endpoint->C08BindRetry != ZB1_OK && endpoint->C08BindRetry != ZB1_KO) {
+				endpoint->Binding = 0x8;
+				endpoint->C08BindRetry--;
+				BindReqFormat_t req = { .DstAddr = node->Address, .ClusterID = 0x8, .DstEndpoint = 1, .SrcEndpoint = endpoint->Endpoint, .DstAddrMode = 0x03 };
 				memcpy(req.SrcAddress, &node->IEEE, 8);
 				memcpy(req.DstAddress, &system.ieee_addr, 8);
 				RUN(zdoBindReq, req)
@@ -412,14 +439,12 @@ uint8_t zbRepairNode(Node_t *node, bool reset) {
 	return MT_RPC_SUCCESS;
 }
 
-static uint8_t retry = 0;
-
 uint8_t zbRepair(Fake_t *f) {
 	uint8_t iNode;
-	bool reset = ((retry++) % 30) == 0;
 	for (iNode = 0; iNode < sys_cfg.NodesCount; iNode++) {
 		Node_t *node = &sys_cfg.Nodes[iNode];
-		zbRepairNode(node, reset);
+		zbRepairNode(node, repairReset);
+		repairReset = false;
 	}
 	return MT_RPC_SUCCESS;
 }
@@ -469,19 +494,7 @@ uint8_t mt_ReadA_OnOff(Node_t *node, IncomingMsgFormat_t *msg) {
 	return MT_RPC_SUCCESS;
 }
 
-uint8_t mt_ReadA(Node_t *node, IncomingMsgFormat_t *msg) {
-	switch (msg->ClusterId) {
-	case 0:
-		mt_ReadA_Basic(node, msg);
-		break;
-	case 6:
-		mt_ReadA_OnOff(node, msg);
-		break;
-	}
-	return MT_RPC_SUCCESS;
-}
-/*
-uint8_t mt_RepA_OnOff(Node_t *node, IncomingMsgFormat_t *msg) {
+uint8_t mt_ReadA_Dimming(Node_t *node, IncomingMsgFormat_t *msg) {
 	uint8_t j = 3;
 	while (j + 2 < msg->Len) {
 		uint16_t currentAttributeId = msg->Data[j++];
@@ -491,26 +504,50 @@ uint8_t mt_RepA_OnOff(Node_t *node, IncomingMsgFormat_t *msg) {
 			uint8_t zigbeeType = msg->Data[j++];
 			if (zigbeeType == 16) {
 				Endpoint_t *endpoint = zbFindEndpoint(node, msg->SrcEndpoint);
-				endpoint->C06ValueRetry = ZB1_OK;
-				endpoint->C06Value = msg->Data[j++];
+				endpoint->C08ValueRetry = ZB1_OK;
+				endpoint->C08Value = msg->Data[j++];
 				call_C_refreshNodeEndpoint(node, endpoint);
 			}
 		}
 	}
 	return MT_RPC_SUCCESS;
 }
-*/
-uint8_t mt_RepA(Node_t *node, IncomingMsgFormat_t *msg) {
+
+uint8_t mt_ReadA(Node_t *node, IncomingMsgFormat_t *msg) {
 	switch (msg->ClusterId) {
-	case 0x06: {
-		uint8_t j = 3;
-		uint16_t currentAttributeId = msg->Data[j++];
-		currentAttributeId |= msg->Data[j++] << 8;
-		uint8_t zigbeeType = msg->Data[j++];
+	case 0x0:
+		mt_ReadA_Basic(node, msg);
+		break;
+	case 0x6:
+		mt_ReadA_OnOff(node, msg);
+		break;
+	case 0x8:
+		mt_ReadA_Dimming(node, msg);
+		break;
+	}
+	return MT_RPC_SUCCESS;
+}
+
+uint8_t mt_RepA(Node_t *node, IncomingMsgFormat_t *msg) {
+	uint8_t j = 3;
+	uint16_t currentAttributeId = msg->Data[j++];
+	currentAttributeId |= msg->Data[j++] << 8;
+	uint8_t zigbeeType = msg->Data[j++];
+	switch (msg->ClusterId) {
+	case 0x6: {
 		if (zigbeeType == 16) {
 			Endpoint_t *endpoint = zbFindEndpoint(node, msg->SrcEndpoint);
 			endpoint->C06ValueRetry = ZB1_OK;
 			endpoint->C06Value = msg->Data[j++];
+			call_C_refreshNodeEndpoint(node, endpoint);
+		}
+	}
+		break;
+	case 0x8: {
+		if (zigbeeType == 16) {
+			Endpoint_t *endpoint = zbFindEndpoint(node, msg->SrcEndpoint);
+			endpoint->C08ValueRetry = ZB1_OK;
+			endpoint->C08Value = msg->Data[j++];
 			call_C_refreshNodeEndpoint(node, endpoint);
 		}
 	}
@@ -525,10 +562,10 @@ uint8_t mtAfIncomingMsgCb(IncomingMsgFormat_t *msg) {
 		return MT_RPC_SUCCESS;
 	}
 	switch (msg->Data[2]) {
-	case 0x01:
+	case 0x1:
 		mt_ReadA(node, msg);
 		break;
-	case 0x0A:
+	case 0xA:
 		mt_RepA(node, msg);
 		break;
 	}
